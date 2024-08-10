@@ -1,5 +1,23 @@
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
 #[derive(Copy, Clone)]
 pub struct Vec2(pub f32, pub f32);
+
+#[wasm_bindgen]
+impl Vec2 {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self(x, y)
+    }
+
+    pub fn x(self) -> f32 {
+        self.0
+    }
+
+    pub fn y(self) -> f32 {
+        self.1
+    }
+}
 
 impl std::ops::Sub for Vec2 {
     type Output = Vec2;

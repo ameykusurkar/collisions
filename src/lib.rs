@@ -7,6 +7,9 @@ pub use vec2::Vec2;
 pub const RED: Color = Color(255, 0, 0);
 pub const PINK: Color = Color(255, 125, 125);
 
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
 #[derive(Copy, Clone)]
 pub struct Color(pub u8, pub u8, pub u8);
 
@@ -19,13 +22,19 @@ impl From<Color> for u32 {
     }
 }
 
+#[wasm_bindgen]
 pub struct Particle {
     pub pos: Vec2,
     pub vel: Vec2,
     pub radius: f32,
 }
 
+#[wasm_bindgen]
 impl Particle {
+    pub fn new(pos: Vec2, vel: Vec2, radius: f32) -> Self {
+        Self { pos, vel, radius }
+    }
+
     fn mass(&self) -> f32 {
         self.radius * self.radius
     }
@@ -127,13 +136,15 @@ impl Frame {
     }
 }
 
+#[wasm_bindgen]
 pub struct World {
     frame: Frame,
     // TODO: Do these need to be public, or can we have a method?
-    pub particles: Vec<Particle>,
-    pub colors: Vec<Color>,
+    particles: Vec<Particle>,
+    colors: Vec<Color>,
 }
 
+#[wasm_bindgen]
 impl World {
     pub fn new(width: usize, height: usize) -> Self {
         let frame = Frame {
@@ -148,17 +159,29 @@ impl World {
         }
     }
 
+    pub fn num_particles(&self) -> usize {
+        self.particles.len()
+    }
+
+    pub fn particles(&self) -> *const Particle {
+        self.particles.as_ptr()
+    }
+
+    pub fn colors(&self) -> *const Color {
+        self.colors.as_ptr()
+    }
+
     /// Adds the particle to the world if the space is unoccupied.
-    pub fn try_push(&mut self, particle: Particle) -> Result<(), ()> {
+    pub fn try_push(&mut self, particle: Particle) -> bool {
         // TODO: We can probably remove this check and let it resolve the static collision
         for p in &self.particles {
             if p.collision(&particle) {
-                return Err(());
+                return false;
             }
         }
         self.particles.push(particle);
         self.colors.push(RED);
-        Ok(())
+        true
     }
 
     pub fn step_frame(&mut self, dt: f32) {
