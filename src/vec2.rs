@@ -9,6 +9,14 @@ impl std::ops::Sub for Vec2 {
     }
 }
 
+impl std::ops::Neg for Vec2 {
+    type Output = Vec2;
+
+    fn neg(self) -> Self::Output {
+        Vec2(-self.0, -self.1)
+    }
+}
+
 impl std::ops::Add for Vec2 {
     type Output = Vec2;
 
@@ -44,5 +52,10 @@ impl Vec2 {
 
     pub fn dist(self, other: Vec2) -> f32 {
         (self - other).mag()
+    }
+
+    pub fn dist_squared(self, other:Vec2) -> f32 {
+        let v = self - other;
+        v.dot(v).abs()
     }
 }

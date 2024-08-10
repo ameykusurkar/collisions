@@ -11,6 +11,8 @@ const HEIGHT: usize = 800;
 const FPS: usize = 60;
 const FRAME_DT: f32 = 1.0 / (FPS as f32);
 
+const RED: Color = Color(255, 0, 0);
+
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -24,10 +26,11 @@ fn main() {
         panic!("{}", e);
     });
 
-    let particles = build_scene(WIDTH, HEIGHT, 50);
+    let particles = build_scene(WIDTH, HEIGHT, 10);
     let mut world = World::new(WIDTH, HEIGHT, particles);
 
     let mut running = true;
+    let mut mouse_down = window.get_mouse_down(minifb::MouseButton::Left);
 
     // Limit to max ~60 fps update rate
     window.set_target_fps(FPS);
@@ -35,6 +38,21 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if window.is_key_released(Key::Space) {
             running ^= true;
+        }
+
+        let old_mouse_down = mouse_down;
+        mouse_down = window.get_mouse_down(minifb::MouseButton::Left);
+        if old_mouse_down && !mouse_down {
+            if let Some((mx, my)) = window.get_mouse_pos(minifb::MouseMode::Discard) {
+                let particle = Particle {
+                    pos: Vec2(mx, my),
+                    vel: Vec2(250.0, 250.0),
+                    radius: 15.0,
+                };
+                world
+                    .try_push(particle)
+                    .unwrap_or_else(|_| println!("({}, {}) is occupied!", mx, my));
+            }
         }
 
         if running {
@@ -72,13 +90,26 @@ impl World {
             top_left: Vec2(0.0, 0.0),
             bottom_right: Vec2(width as f32, height as f32),
         };
-        let colors: Vec<_> = particles.iter().map(|_| Color(255, 0, 0)).collect();
+        let colors = vec![RED; particles.len()];
 
         Self {
             frame,
             particles,
             colors,
         }
+    }
+
+    /// Adds the particle to the world if the space is unoccupied.
+    fn try_push(&mut self, particle: Particle) -> Result<(), ()> {
+        // TODO: We can probably remove this check and let it resolve the static collision
+        for p in &self.particles {
+            if p.collision(&particle) {
+                return Err(());
+            }
+        }
+        self.particles.push(particle);
+        self.colors.push(RED);
+        Ok(())
     }
 
     fn step_frame(&mut self, dt: f32) {
@@ -96,17 +127,11 @@ impl World {
             let part2 = &self.particles[i2];
 
             // TODO: Can a particle collide with multiple particles per frame?
-            if let Some((v1, v2)) = &part1.collide(&part2) {
-                new_vels[i1] = Some(*v1);
-                new_vels[i2] = Some(*v2);
-
-                // TODO: Implement proper collision detection
-                let axis = part2.pos - part1.pos;
-                let dist = axis.mag();
-                let overlap = part1.radius + part2.radius - dist + 1e-5;
-                let axis_norm = axis / dist;
-                new_pos[i1] = Some(part1.pos - axis_norm * (overlap / 2.0));
-                new_pos[i2] = Some(part2.pos + axis_norm * (overlap / 2.0));
+            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(&part2) {
+                new_vels[i1] = Some(*vel1);
+                new_vels[i2] = Some(*vel2);
+                new_pos[i1] = Some(*pos1);
+                new_pos[i2] = Some(*pos2);
             }
         }
 
@@ -212,22 +237,42 @@ impl Particle {
     }
 
     fn collision(&self, other: &Particle) -> bool {
-        Vec2::dist(self.pos, other.pos) < self.radius + other.radius
+        let radius_sum = self.radius + other.radius;
+        Vec2::dist_squared(self.pos, other.pos) < (radius_sum * radius_sum)
     }
 
-    fn collide(&self, other: &Particle) -> Option<(Vec2, Vec2)> {
+    fn collide(&self, other: &Particle) -> Option<((Vec2, Vec2), (Vec2, Vec2))> {
         if self.collision(other) {
-            Some((self.new_vel(other), other.new_vel(self)))
+            Some((
+                Particle::new_vel(self, other),
+                Particle::new_pos(self, other),
+            ))
         } else {
             None
         }
     }
 
-    fn new_vel(&self, other: &Particle) -> Vec2 {
-        let dpos = self.pos - other.pos;
-        let vdot = Vec2::dot(self.vel - other.vel, dpos);
-        let xdot = Vec2::dot(dpos, dpos);
-        self.vel - dpos * (vdot / xdot * 2.0 * other.mass() / (self.mass() + other.mass()))
+    fn new_vel(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
+        // As measured for p1 (self)
+        let dpos = p1.pos - p2.pos;
+        let coeff = Vec2::dot(p1.vel - p2.vel, dpos) / Vec2::dot(dpos, dpos);
+
+        let m1 = p1.mass();
+        let m2 = p2.mass();
+        let m_coeff1 = 2.0 * m1 / (m1 + m2);
+        let m_coeff2 = 2.0 * m2 / (m1 + m2);
+
+        let dvel = dpos * coeff;
+        (p1.vel - dvel * m_coeff1, p2.vel + dvel * m_coeff2)
+    }
+
+    fn new_pos(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
+        let axis = p2.pos - p1.pos;
+        let dist = axis.mag();
+        let half_overlap = 0.5 * (p1.radius + p2.radius - dist);
+        let axis_norm = axis / dist;
+        let displacement = axis_norm * half_overlap;
+        (p1.pos - displacement, p2.pos + displacement)
     }
 }
 
