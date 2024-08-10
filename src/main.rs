@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use minifb::{Key, Window, WindowOptions};
 use rand::distributions::{Distribution, Uniform};
 
@@ -5,8 +6,8 @@ mod vec2;
 
 use vec2::Vec2;
 
-const WIDTH: usize = 500;
-const HEIGHT: usize = 500;
+const WIDTH: usize = 1200;
+const HEIGHT: usize = 800;
 const FPS: usize = 60;
 const FRAME_DT: f32 = 1.0 / (FPS as f32);
 
@@ -23,48 +24,57 @@ fn main() {
         panic!("{}", e);
     });
 
-    let (mut part1, mut part2) = build_scene(WIDTH, HEIGHT);
+    let mut particles = build_scene(WIDTH, HEIGHT, 15);
 
     let frame = Frame {
         top_left: Vec2(0.0, 0.0),
         bottom_right: Vec2(WIDTH as f32, HEIGHT as f32),
     };
 
+    let mut colors: Vec<_> = particles.iter().map(|_| Color(0, 0, 0)).collect();
+
     // Limit to max ~60 fps update rate
     window.set_target_fps(FPS);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        part1.step(FRAME_DT);
-        part2.step(FRAME_DT);
+        for part in particles.iter_mut() {
+            part.step(FRAME_DT);
+        }
 
-        if Particle::collision(&part1, &part2) {
-            let v1 = part1.new_vel(&part2);
-            let v2 = part2.new_vel(&part1);
-            part1.vel = v1;
-            part2.vel = v2;
-        } else {
-            part1.frame_collision(&frame);
-            part2.frame_collision(&frame);
+        let mut new_vels: Vec<Option<Vec2>> = vec![None; particles.len()];
+
+        for range_set in (0..particles.len()).combinations(2) {
+            let i1 = range_set[0];
+            let i2 = range_set[1];
+            let part1 = &particles[i1];
+            let part2 = &particles[i2];
+
+            // TODO: Can a particle collide with multiple particles per frame?
+            if let Some((v1, v2)) = &part1.collide(&part2) {
+                new_vels[i1] = Some(*v1);
+                new_vels[i2] = Some(*v2);
+            }
+        }
+
+        for (i, part) in particles.iter_mut().enumerate() {
+            if let Some(v) = new_vels[i] {
+                part.vel = v;
+                colors[i] = Color::random();
+            } else {
+                part.frame_collision(&frame);
+            }
         }
 
         for (x, pixel) in buffer.iter_mut().enumerate() {
             let p = Vec2((x % WIDTH) as f32, (x / WIDTH) as f32);
 
-            let col = if part1.contains(p) {
-                Color(
-                    (p.0 / (WIDTH as f32) * 255.0) as u8,
-                    (p.1 / (HEIGHT as f32) * 255.0) as u8,
-                    0,
-                )
-            } else if part2.contains(p) {
-                Color(
-                    0,
-                    (p.0 / (WIDTH as f32) * 255.99) as u8,
-                    255 - (p.1 / (HEIGHT as f32) * 255.99) as u8,
-                )
-            } else {
-                Color(255, 225, 255)
-            };
+            let mut col = Color(255, 225, 255);
+            for (i, part) in particles.iter().enumerate() {
+                if part.contains(p) {
+                    col = colors[i];
+                    break;
+                }
+            }
 
             *pixel = col.into();
         }
@@ -74,37 +84,38 @@ fn main() {
     }
 }
 
-fn build_scene(width: usize, height: usize) -> (Particle, Particle) {
-    let mut rng = rand::thread_rng();
-
-    let r1 = Uniform::from(10..100).sample(&mut rng);
-    let r2 = 100 - r1;
-
+fn build_scene(width: usize, height: usize, count: u32) -> Vec<Particle> {
     loop {
-        let part1 = Particle {
-            pos: Vec2(
-                Uniform::from(r1..width - r1).sample(&mut rng) as f32,
-                Uniform::from(r1..height - r1).sample(&mut rng) as f32,
-            ),
-            radius: r1 as f32,
-            vel: Vec2(
-                Uniform::from(-250..250).sample(&mut rng) as f32,
-                Uniform::from(-250..250).sample(&mut rng) as f32,
-            ),
-        };
+        let particles: Vec<_> = (0..count).map(|_| random_particle(width, height)).collect();
+        if (0..particles.len()).combinations(2).any(|range_set| {
+            let i1 = range_set[0];
+            let i2 = range_set[1];
+            let part1 = &particles[i1];
+            let part2 = &particles[i2];
 
-        let part2 = Particle {
-            pos: Vec2(
-                Uniform::from(r2..width - r2).sample(&mut rng) as f32,
-                Uniform::from(r2..height - r2).sample(&mut rng) as f32,
-            ),
-            radius: r2 as f32,
-            vel: Vec2(250.0, 250.0) - part1.vel,
-        };
-
-        if !Particle::collision(&part1, &part2) {
-            return (part1, part2);
+            part1.collision(part2)
+        }) {
+            println!("Collision detected in initial state, trying again!");
+            continue;
         }
+        return particles;
+    }
+}
+
+fn random_particle(width: usize, height: usize) -> Particle {
+    let mut rng = rand::thread_rng();
+    let radius = Uniform::from(20..50).sample(&mut rng);
+
+    Particle {
+        pos: Vec2(
+            Uniform::from(radius..width - radius).sample(&mut rng) as f32,
+            Uniform::from(radius..height - radius).sample(&mut rng) as f32,
+        ),
+        radius: radius as f32,
+        vel: Vec2(
+            Uniform::from(-250..250).sample(&mut rng) as f32,
+            Uniform::from(-250..250).sample(&mut rng) as f32,
+        ),
     }
 }
 
@@ -117,6 +128,17 @@ impl From<Color> for u32 {
         let g: u32 = value.1.into();
         let b: u32 = value.2.into();
         (r << 16) + (g << 8) + b
+    }
+}
+
+impl Color {
+    fn random() -> Color {
+        let mut rng = rand::thread_rng();
+        Self(
+            Uniform::from(0..255).sample(&mut rng),
+            Uniform::from(0..255).sample(&mut rng),
+            Uniform::from(0..255).sample(&mut rng),
+        )
     }
 }
 
@@ -151,6 +173,14 @@ impl Particle {
 
     fn collision(&self, other: &Particle) -> bool {
         Vec2::dist(self.pos, other.pos) < self.radius + other.radius
+    }
+
+    fn collide(&self, other: &Particle) -> Option<(Vec2, Vec2)> {
+        if self.collision(other) {
+            Some((self.new_vel(other), other.new_vel(self)))
+        } else {
+            None
+        }
     }
 
     fn new_vel(&self, other: &Particle) -> Vec2 {
