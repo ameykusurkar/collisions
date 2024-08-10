@@ -26,8 +26,15 @@ fn main() {
         panic!("{}", e);
     });
 
-    let particles = build_scene(WIDTH, HEIGHT, 10);
-    let mut world = World::new(WIDTH, HEIGHT, particles);
+    let mut world = World::new(WIDTH, HEIGHT);
+
+    let mut particles_to_add = 10;
+    while particles_to_add > 0 {
+        let p = random_particle(WIDTH, HEIGHT);
+        if world.try_push(p).is_ok() {
+            particles_to_add -= 1;
+        }
+    }
 
     let mut running = true;
     let mut mouse_down = window.get_mouse_down(minifb::MouseButton::Left);
@@ -85,17 +92,16 @@ struct World {
 }
 
 impl World {
-    fn new(width: usize, height: usize, particles: Vec<Particle>) -> Self {
+    fn new(width: usize, height: usize) -> Self {
         let frame = Frame {
             top_left: Vec2(0.0, 0.0),
             bottom_right: Vec2(width as f32, height as f32),
         };
-        let colors = vec![RED; particles.len()];
 
         Self {
             frame,
-            particles,
-            colors,
+            particles: Vec::new(),
+            colors: Vec::new(),
         }
     }
 
@@ -135,6 +141,7 @@ impl World {
             }
         }
 
+        // TODO: Unify how particle-particle and particle-frame collisions are done
         for (i, part) in self.particles.iter_mut().enumerate() {
             if let Some(v) = new_vels[i] {
                 part.vel = v;
@@ -148,24 +155,6 @@ impl World {
                 part.pos = p;
             }
         }
-    }
-}
-
-fn build_scene(width: usize, height: usize, count: u32) -> Vec<Particle> {
-    loop {
-        let particles: Vec<_> = (0..count).map(|_| random_particle(width, height)).collect();
-        if (0..particles.len()).combinations(2).any(|range_set| {
-            let i1 = range_set[0];
-            let i2 = range_set[1];
-            let part1 = &particles[i1];
-            let part2 = &particles[i2];
-
-            part1.collision(part2)
-        }) {
-            println!("Collision detected in initial state, trying again!");
-            continue;
-        }
-        return particles;
     }
 }
 
