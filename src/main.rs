@@ -24,31 +24,76 @@ fn main() {
         panic!("{}", e);
     });
 
-    let mut particles = build_scene(WIDTH, HEIGHT, 50);
+    let particles = build_scene(WIDTH, HEIGHT, 50);
+    let mut world = World::new(WIDTH, HEIGHT, particles);
 
-    let frame = Frame {
-        top_left: Vec2(0.0, 0.0),
-        bottom_right: Vec2(WIDTH as f32, HEIGHT as f32),
-    };
-
-    let mut colors: Vec<_> = particles.iter().map(|_| Color(255, 0, 0)).collect();
+    let mut running = true;
 
     // Limit to max ~60 fps update rate
     window.set_target_fps(FPS);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        for part in particles.iter_mut() {
-            part.step(FRAME_DT);
+        if window.is_key_released(Key::Space) {
+            running ^= true;
         }
 
-        let mut new_vels: Vec<Option<Vec2>> = vec![None; particles.len()];
-        let mut new_pos: Vec<Option<Vec2>> = vec![None; particles.len()];
+        if running {
+            world.step_frame(FRAME_DT);
 
-        for range_set in (0..particles.len()).combinations(2) {
+            for (x, pixel) in buffer.iter_mut().enumerate() {
+                let p = Vec2((x % WIDTH) as f32, (x / WIDTH) as f32);
+
+                let mut col = Color(255, 225, 255);
+                for (part, part_clr) in world.particles.iter().zip(&world.colors) {
+                    if part.contains(p) {
+                        col = *part_clr;
+                        break;
+                    }
+                }
+
+                *pixel = col.into();
+            }
+        }
+
+        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+        window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+    }
+}
+
+struct World {
+    frame: Frame,
+    particles: Vec<Particle>,
+    colors: Vec<Color>,
+}
+
+impl World {
+    fn new(width: usize, height: usize, particles: Vec<Particle>) -> Self {
+        let frame = Frame {
+            top_left: Vec2(0.0, 0.0),
+            bottom_right: Vec2(width as f32, height as f32),
+        };
+        let colors: Vec<_> = particles.iter().map(|_| Color(255, 0, 0)).collect();
+
+        Self {
+            frame,
+            particles,
+            colors,
+        }
+    }
+
+    fn step_frame(&mut self, dt: f32) {
+        for part in self.particles.iter_mut() {
+            part.step(dt);
+        }
+
+        let mut new_vels: Vec<Option<Vec2>> = vec![None; self.particles.len()];
+        let mut new_pos: Vec<Option<Vec2>> = vec![None; self.particles.len()];
+
+        for range_set in (0..self.particles.len()).combinations(2) {
             let i1 = range_set[0];
             let i2 = range_set[1];
-            let part1 = &particles[i1];
-            let part2 = &particles[i2];
+            let part1 = &self.particles[i1];
+            let part2 = &self.particles[i2];
 
             // TODO: Can a particle collide with multiple particles per frame?
             if let Some((v1, v2)) = &part1.collide(&part2) {
@@ -65,36 +110,19 @@ fn main() {
             }
         }
 
-        for (i, part) in particles.iter_mut().enumerate() {
+        for (i, part) in self.particles.iter_mut().enumerate() {
             if let Some(v) = new_vels[i] {
                 part.vel = v;
-                colors[i].0 = colors[i].0.wrapping_sub(10);
-                colors[i].2 = colors[i].2.wrapping_add(10);
+                self.colors[i].0 = self.colors[i].0.wrapping_sub(10);
+                self.colors[i].2 = self.colors[i].2.wrapping_add(10);
             } else {
-                part.frame_collision(&frame);
+                part.frame_collision(&self.frame);
             }
 
             if let Some(p) = new_pos[i] {
                 part.pos = p;
             }
         }
-
-        for (x, pixel) in buffer.iter_mut().enumerate() {
-            let p = Vec2((x % WIDTH) as f32, (x / WIDTH) as f32);
-
-            let mut col = Color(255, 225, 255);
-            for (i, part) in particles.iter().enumerate() {
-                if part.contains(p) {
-                    col = colors[i];
-                    break;
-                }
-            }
-
-            *pixel = col.into();
-        }
-
-        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
     }
 }
 
