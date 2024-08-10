@@ -12,6 +12,7 @@ const FPS: usize = 60;
 const FRAME_DT: f32 = 1.0 / (FPS as f32);
 
 const RED: Color = Color(255, 0, 0);
+const PINK: Color = Color(255, 125, 125);
 
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
@@ -27,6 +28,7 @@ fn main() {
     });
 
     let mut world = World::new(WIDTH, HEIGHT);
+    let mut phantom_particle: Option<Particle> = None;
 
     let mut particles_to_add = 10;
     while particles_to_add > 0 {
@@ -49,16 +51,32 @@ fn main() {
 
         let old_mouse_down = mouse_down;
         mouse_down = window.get_mouse_down(minifb::MouseButton::Left);
-        if old_mouse_down && !mouse_down {
+
+        // Mouse pressed
+        if !old_mouse_down && mouse_down {
             if let Some((mx, my)) = window.get_mouse_pos(minifb::MouseMode::Discard) {
                 let particle = Particle {
                     pos: Vec2(mx, my),
-                    vel: Vec2(250.0, 250.0),
+                    vel: Vec2(0.0, 0.0),
                     radius: 15.0,
                 };
+                phantom_particle = Some(particle);
+            }
+        }
+
+        // Mouse release
+        if old_mouse_down && !mouse_down {
+            if let Some(particle) = phantom_particle {
+                let pos = particle.pos;
+                let vel = if let Some((mx, my)) = window.get_mouse_pos(minifb::MouseMode::Clamp) {
+                    (pos - Vec2(mx, my)) * 2.0
+                } else {
+                    Vec2(0.0, 0.0)
+                };
                 world
-                    .try_push(particle)
-                    .unwrap_or_else(|_| println!("({}, {}) is occupied!", mx, my));
+                    .try_push(Particle { vel, ..particle })
+                    .unwrap_or_else(|_| println!("({}, {}) is occupied!", pos.0, pos.1));
+                phantom_particle = None;
             }
         }
 
@@ -73,6 +91,11 @@ fn main() {
                     if part.contains(p) {
                         col = *part_clr;
                         break;
+                    }
+                }
+                if let Some(part) = &phantom_particle {
+                    if part.contains(p) {
+                        col = PINK;
                     }
                 }
 
@@ -133,7 +156,7 @@ impl World {
             let part2 = &self.particles[i2];
 
             // TODO: Can a particle collide with multiple particles per frame?
-            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(&part2) {
+            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(part2) {
                 new_vels[i1] = Some(*vel1);
                 new_vels[i2] = Some(*vel2);
                 new_pos[i1] = Some(*pos1);
@@ -273,9 +296,9 @@ struct Frame {
 impl Frame {
     fn collide_x(&self, part: &Particle) -> Option<f32> {
         if part.pos.0 - part.radius < self.top_left.0 {
-            return Some(self.top_left.0);
+            Some(self.top_left.0)
         } else if part.pos.0 + part.radius > self.bottom_right.0 {
-            return Some(self.bottom_right.0);
+            Some(self.bottom_right.0)
         } else {
             None
         }
@@ -283,9 +306,9 @@ impl Frame {
 
     fn collide_y(&self, part: &Particle) -> Option<f32> {
         if part.pos.1 - part.radius < self.top_left.1 {
-            return Some(self.top_left.1);
+            Some(self.top_left.1)
         } else if part.pos.1 + part.radius > self.bottom_right.1 {
-            return Some(self.bottom_right.1);
+            Some(self.bottom_right.1)
         } else {
             None
         }
