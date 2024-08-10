@@ -24,14 +24,14 @@ fn main() {
         panic!("{}", e);
     });
 
-    let mut particles = build_scene(WIDTH, HEIGHT, 15);
+    let mut particles = build_scene(WIDTH, HEIGHT, 50);
 
     let frame = Frame {
         top_left: Vec2(0.0, 0.0),
         bottom_right: Vec2(WIDTH as f32, HEIGHT as f32),
     };
 
-    let mut colors: Vec<_> = particles.iter().map(|_| Color(0, 0, 0)).collect();
+    let mut colors: Vec<_> = particles.iter().map(|_| Color(255, 0, 0)).collect();
 
     // Limit to max ~60 fps update rate
     window.set_target_fps(FPS);
@@ -42,6 +42,7 @@ fn main() {
         }
 
         let mut new_vels: Vec<Option<Vec2>> = vec![None; particles.len()];
+        let mut new_pos: Vec<Option<Vec2>> = vec![None; particles.len()];
 
         for range_set in (0..particles.len()).combinations(2) {
             let i1 = range_set[0];
@@ -53,15 +54,28 @@ fn main() {
             if let Some((v1, v2)) = &part1.collide(&part2) {
                 new_vels[i1] = Some(*v1);
                 new_vels[i2] = Some(*v2);
+
+                // TODO: Implement proper collision detection
+                let axis = part2.pos - part1.pos;
+                let dist = axis.mag();
+                let overlap = part1.radius + part2.radius - dist + 1e-5;
+                let axis_norm = axis / dist;
+                new_pos[i1] = Some(part1.pos - axis_norm * (overlap / 2.0));
+                new_pos[i2] = Some(part2.pos + axis_norm * (overlap / 2.0));
             }
         }
 
         for (i, part) in particles.iter_mut().enumerate() {
             if let Some(v) = new_vels[i] {
                 part.vel = v;
-                colors[i] = Color::random();
+                colors[i].0 = colors[i].0.wrapping_sub(10);
+                colors[i].2 = colors[i].2.wrapping_add(10);
             } else {
                 part.frame_collision(&frame);
+            }
+
+            if let Some(p) = new_pos[i] {
+                part.pos = p;
             }
         }
 
@@ -104,7 +118,7 @@ fn build_scene(width: usize, height: usize, count: u32) -> Vec<Particle> {
 
 fn random_particle(width: usize, height: usize) -> Particle {
     let mut rng = rand::thread_rng();
-    let radius = Uniform::from(20..50).sample(&mut rng);
+    let radius = 15;
 
     Particle {
         pos: Vec2(
@@ -112,10 +126,7 @@ fn random_particle(width: usize, height: usize) -> Particle {
             Uniform::from(radius..height - radius).sample(&mut rng) as f32,
         ),
         radius: radius as f32,
-        vel: Vec2(
-            Uniform::from(-250..250).sample(&mut rng) as f32,
-            Uniform::from(-250..250).sample(&mut rng) as f32,
-        ),
+        vel: Vec2(350.0, 350.0),
     }
 }
 
@@ -128,17 +139,6 @@ impl From<Color> for u32 {
         let g: u32 = value.1.into();
         let b: u32 = value.2.into();
         (r << 16) + (g << 8) + b
-    }
-}
-
-impl Color {
-    fn random() -> Color {
-        let mut rng = rand::thread_rng();
-        Self(
-            Uniform::from(0..255).sample(&mut rng),
-            Uniform::from(0..255).sample(&mut rng),
-            Uniform::from(0..255).sample(&mut rng),
-        )
     }
 }
 
@@ -162,12 +162,24 @@ impl Particle {
     }
 
     fn frame_collision(&mut self, frame: &Frame) {
-        if collide_x(frame, self) {
+        if let Some(cx) = frame.collide_x(self) {
             self.vel.0 = self.vel.0 * -1.0;
+
+            let axis = self.pos.0 - cx;
+            let dist = axis.abs();
+            let overlap = self.radius - dist + 1e-5;
+            let axis_norm = axis / dist;
+            self.pos.0 = self.pos.0 + axis_norm * overlap;
         }
 
-        if collide_y(frame, self) {
+        if let Some(cy) = frame.collide_y(self) {
             self.vel.1 = self.vel.1 * -1.0;
+
+            let axis = self.pos.1 - cy;
+            let dist = axis.abs();
+            let overlap = self.radius - dist + 1e-5;
+            let axis_norm = axis / dist;
+            self.pos.1 = self.pos.1 + axis_norm * overlap;
         }
     }
 
@@ -196,10 +208,24 @@ struct Frame {
     bottom_right: Vec2,
 }
 
-fn collide_x(frame: &Frame, part: &Particle) -> bool {
-    part.pos.0 - part.radius < frame.top_left.0 || part.pos.0 + part.radius > frame.bottom_right.0
-}
+impl Frame {
+    fn collide_x(&self, part: &Particle) -> Option<f32> {
+        if part.pos.0 - part.radius < self.top_left.0 {
+            return Some(self.top_left.0);
+        } else if part.pos.0 + part.radius > self.bottom_right.0 {
+            return Some(self.bottom_right.0);
+        } else {
+            None
+        }
+    }
 
-fn collide_y(frame: &Frame, part: &Particle) -> bool {
-    part.pos.1 - part.radius < frame.top_left.1 || part.pos.1 + part.radius > frame.bottom_right.1
+    fn collide_y(&self, part: &Particle) -> Option<f32> {
+        if part.pos.1 - part.radius < self.top_left.1 {
+            return Some(self.top_left.1);
+        } else if part.pos.1 + part.radius > self.bottom_right.1 {
+            return Some(self.bottom_right.1);
+        } else {
+            None
+        }
+    }
 }
