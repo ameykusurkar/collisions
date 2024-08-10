@@ -82,29 +82,33 @@ fn main() {
 
         if running {
             world.step_frame(FRAME_DT);
-
-            for (x, pixel) in buffer.iter_mut().enumerate() {
-                let p = Vec2((x % WIDTH) as f32, (x / WIDTH) as f32);
-
-                let mut col = Color(255, 225, 255);
-                for (part, part_clr) in world.particles.iter().zip(&world.colors) {
-                    if part.contains(p) {
-                        col = *part_clr;
-                        break;
-                    }
-                }
-                if let Some(part) = &phantom_particle {
-                    if part.contains(p) {
-                        col = PINK;
-                    }
-                }
-
-                *pixel = col.into();
-            }
         }
+
+        render(&mut buffer, &world, &phantom_particle);
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+    }
+}
+
+fn render(buffer: &mut Vec<u32>, world: &World, phantom_particle: &Option<Particle>) {
+    for (x, pixel) in buffer.iter_mut().enumerate() {
+        let p = Vec2((x % WIDTH) as f32, (x / WIDTH) as f32);
+
+        let mut col = Color(255, 225, 255);
+        for (part, part_clr) in world.particles.iter().zip(&world.colors) {
+            if part.contains(p) {
+                col = *part_clr;
+                break;
+            }
+        }
+        if let Some(part) = phantom_particle {
+            if part.contains(p) {
+                col = PINK;
+            }
+        }
+
+        *pixel = col.into();
     }
 }
 
