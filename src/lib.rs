@@ -1,6 +1,7 @@
-use itertools::Itertools;
-
+mod pairs;
 mod vec2;
+
+use pairs::Pairs;
 
 pub use vec2::Vec2;
 
@@ -196,9 +197,7 @@ impl World {
         let mut new_vels: Vec<Option<Vec2>> = vec![None; self.particles.len()];
         let mut new_pos: Vec<Option<Vec2>> = vec![None; self.particles.len()];
 
-        for range_set in (0..self.particles.len()).combinations(2) {
-            let i1 = range_set[0];
-            let i2 = range_set[1];
+        for (i1, i2) in Pairs::new(self.particles.len()) {
             let part1 = &self.particles[i1];
             let part2 = &self.particles[i2];
 

@@ -72,7 +72,7 @@ impl Vec2 {
         (self - other).mag()
     }
 
-    pub fn dist_squared(self, other:Vec2) -> f32 {
+    pub fn dist_squared(self, other: Vec2) -> f32 {
         let v = self - other;
         v.dot(v).abs()
     }

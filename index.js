@@ -16,7 +16,7 @@ var phantomParticle = null;
 init().then((instance) => {
   memory = instance.memory;
   world = World.new(WIDTH, HEIGHT);
-  populateWorld(world, 0);
+  populateWorld(world, 30);
 
   canvas.addEventListener('mousedown', function(event) {
     if (event.button === 0) {
