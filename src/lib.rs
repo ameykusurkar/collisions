@@ -43,8 +43,12 @@ impl Particle {
         Vec2::dist(self.pos, p) < self.radius
     }
 
-    fn step(&mut self, dt: f32) {
+    fn step(&mut self, dt: f32, drag: f32) {
         self.pos = self.pos + self.vel * dt;
+        self.vel = self.vel * drag;
+        if self.vel.dot(self.vel) < 1e-2 {
+            self.vel = Vec2(0.0, 0.0);
+        }
     }
 
     fn frame_collision(&mut self, frame: &Frame) {
@@ -184,9 +188,9 @@ impl World {
         true
     }
 
-    pub fn step_frame(&mut self, dt: f32) {
+    pub fn step_frame(&mut self, dt: f32, drag: f32) {
         for part in self.particles.iter_mut() {
-            part.step(dt);
+            part.step(dt, drag);
         }
 
         let mut new_vels: Vec<Option<Vec2>> = vec![None; self.particles.len()];

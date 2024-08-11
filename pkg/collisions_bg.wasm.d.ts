@@ -31,4 +31,4 @@ export function world_num_particles(a: number): number;
 export function world_particles(a: number): number;
 export function world_colors(a: number): number;
 export function world_try_push(a: number, b: number): number;
-export function world_step_frame(a: number, b: number): void;
+export function world_step_frame(a: number, b: number, c: number): void;

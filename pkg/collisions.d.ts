@@ -95,8 +95,9 @@ export class World {
   try_push(particle: Particle): boolean;
 /**
 * @param {number} dt
+* @param {number} drag
 */
-  step_frame(dt: number): void;
+  step_frame(dt: number, drag: number): void;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -133,7 +134,7 @@ export interface InitOutput {
   readonly world_particles: (a: number) => number;
   readonly world_colors: (a: number) => number;
   readonly world_try_push: (a: number, b: number) => number;
-  readonly world_step_frame: (a: number, b: number) => void;
+  readonly world_step_frame: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

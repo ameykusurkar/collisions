@@ -1,10 +1,12 @@
 import init, { Particle, Vec2, World } from "./pkg/collisions.js";
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
 const WIDTH = 1200;
-
 const HEIGHT = 800;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const dragRange = document.getElementById('dragRange');
+const dragValue = document.getElementById('dragValue');
 
 var world = null;
 var memory = null;
@@ -71,7 +73,8 @@ init().then((instance) => {
 
 const renderLoop = () => {
   // TODO: Calculate frame interval
-  world.step_frame(1.0 / 60);
+  world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value));
+  dragValue.textContent = dragRange.value;
 
   render(memory, world);
 

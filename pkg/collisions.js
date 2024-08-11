@@ -327,9 +327,10 @@ export class World {
     }
     /**
     * @param {number} dt
+    * @param {number} drag
     */
-    step_frame(dt) {
-        wasm.world_step_frame(this.__wbg_ptr, dt);
+    step_frame(dt, drag) {
+        wasm.world_step_frame(this.__wbg_ptr, dt, drag);
     }
 }
 
