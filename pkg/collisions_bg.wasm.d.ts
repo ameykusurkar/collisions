@@ -1,14 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export function __wbg_vec2_free(a: number): void;
-export function __wbg_get_vec2_0(a: number): number;
-export function __wbg_set_vec2_0(a: number, b: number): void;
-export function __wbg_get_vec2_1(a: number): number;
-export function __wbg_set_vec2_1(a: number, b: number): void;
-export function vec2_new(a: number, b: number): number;
-export function vec2_x(a: number): number;
-export function vec2_y(a: number): number;
 export function __wbg_color_free(a: number): void;
 export function __wbg_get_color_0(a: number): number;
 export function __wbg_set_color_0(a: number, b: number): void;
@@ -34,3 +26,11 @@ export function world_colors(a: number): number;
 export function world_try_push(a: number, b: number): number;
 export function world_step_frame(a: number, b: number, c: number): void;
 export function world_step_dt(a: number, b: number, c: number): void;
+export function __wbg_vec2_free(a: number): void;
+export function __wbg_get_vec2_0(a: number): number;
+export function __wbg_set_vec2_0(a: number, b: number): void;
+export function __wbg_get_vec2_1(a: number): number;
+export function __wbg_set_vec2_1(a: number, b: number): void;
+export function vec2_new(a: number, b: number): number;
+export function vec2_x(a: number): number;
+export function vec2_y(a: number): number;

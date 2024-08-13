@@ -113,14 +113,6 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly __wbg_vec2_free: (a: number) => void;
-  readonly __wbg_get_vec2_0: (a: number) => number;
-  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
-  readonly __wbg_get_vec2_1: (a: number) => number;
-  readonly __wbg_set_vec2_1: (a: number, b: number) => void;
-  readonly vec2_new: (a: number, b: number) => number;
-  readonly vec2_x: (a: number) => number;
-  readonly vec2_y: (a: number) => number;
   readonly __wbg_color_free: (a: number) => void;
   readonly __wbg_get_color_0: (a: number) => number;
   readonly __wbg_set_color_0: (a: number, b: number) => void;
@@ -146,6 +138,14 @@ export interface InitOutput {
   readonly world_try_push: (a: number, b: number) => number;
   readonly world_step_frame: (a: number, b: number, c: number) => void;
   readonly world_step_dt: (a: number, b: number, c: number) => void;
+  readonly __wbg_vec2_free: (a: number) => void;
+  readonly __wbg_get_vec2_0: (a: number) => number;
+  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
+  readonly __wbg_get_vec2_1: (a: number) => number;
+  readonly __wbg_set_vec2_1: (a: number, b: number) => void;
+  readonly vec2_new: (a: number, b: number) => number;
+  readonly vec2_x: (a: number) => number;
+  readonly vec2_y: (a: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

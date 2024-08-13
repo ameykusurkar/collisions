@@ -85,7 +85,6 @@ impl Particle {
         }
     }
 
-    // TODO: Just return the new velocity
     fn new_vel(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
         // As measured for p1 (self)
         let dpos = p1.pos - p2.pos;
@@ -97,17 +96,16 @@ impl Particle {
         let m_coeff2 = 2.0 * m2 / (m1 + m2);
 
         let dvel = dpos * coeff;
-        (-dvel * m_coeff1, dvel * m_coeff2)
+        (p1.vel - dvel * m_coeff1, p2.vel + dvel * m_coeff2)
     }
 
-    // TODO: Just return the new pos
     fn new_pos(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
         let axis = p2.pos - p1.pos;
         let dist = axis.mag();
         let half_overlap = 0.5 * (p1.radius + p2.radius - dist);
         let axis_norm = axis / dist;
         let displacement = axis_norm * half_overlap;
-        (-displacement, displacement)
+        (p1.pos - displacement, p2.pos + displacement)
     }
 }
 
@@ -204,43 +202,29 @@ impl World {
             part.step(dt, drag);
         }
 
-        // TODO: Update the actual particles
-        let mut dvel: Vec<Vec2> = self.particles.iter().map(|p| p.vel).collect();
-        let mut dpos: Vec<Vec2> = self.particles.iter().map(|p| p.pos).collect();
-
         for (i1, i2) in Pairs::new(self.particles.len()) {
-            let part1 = &self.particles[i1];
-            let part2 = &self.particles[i2];
+            // Split the array into non-overlapping slices to convince the borrow checker
+            // that p1 and p2 are pointing to different particles.
+            // TODO: `Pairs` should handle this and yield mut references when iterating.
+            let (fst, rem) = self.particles.split_at_mut(i2);
+            let p1 = &mut fst[i1];
+            let p2 = &mut rem[0];
 
-            let part1 = Particle {
-                pos: dpos[i1],
-                vel: dvel[i1],
-                radius: part1.radius,
-            };
-            let part2 = Particle {
-                pos: dpos[i2],
-                vel: dvel[i2],
-                radius: part2.radius,
-            };
+            if let Some(((vel1, vel2), (pos1, pos2))) = p1.collide(p2) {
+                p1.vel = vel1 * 0.99;
+                p2.vel = vel2 * 0.99;
 
-            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(&part2) {
-                dvel[i1] = dvel[i1] + *vel1;
-                dvel[i2] = dvel[i2] + *vel2;
-                dpos[i1] = dpos[i1] + *pos1;
-                dpos[i2] = dpos[i2] + *pos2;
+                p1.pos = pos1;
+                p2.pos = pos2;
 
                 self.colors[i1].0 = self.colors[i1].0.wrapping_sub(1);
                 self.colors[i2].2 = self.colors[i2].2.wrapping_add(1);
-                dvel[i1] = dvel[i1] * 0.99;
-                dvel[i2] = dvel[i2] * 0.99;
             }
         }
 
         // TODO: Unify how particle-particle and particle-frame collisions are done
-        for (i, part) in self.particles.iter_mut().enumerate() {
-            part.vel = dvel[i];
-            part.pos = dpos[i];
-            part.frame_collision(&self.frame);
+        for p in self.particles.iter_mut() {
+            p.frame_collision(&self.frame);
         }
     }
 }

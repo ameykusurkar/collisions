@@ -15,12 +15,10 @@ var mousedown = false;
 var phantomParticle = null;
 
 var totalParticles = 0;
-var totalFrames = 0;
 
 init().then((instance) => {
   memory = instance.memory;
   world = World.new(WIDTH, HEIGHT);
-  //populateWorld(world, 1000);
 
   canvas.addEventListener('mousedown', function(event) {
     if (event.button === 0) {
@@ -82,7 +80,8 @@ const renderLoop = () => {
   momentumValue.textContent = world.momentum();
 
   if (totalParticles < 1000) {
-    if (world.try_push(randomParticle())) {
+    let p = Particle.new(Vec2.new(10, 200), Vec2.new(1000, 0), 7);
+    if (world.try_push(p)) {
       totalParticles++;
     }
   }
@@ -133,37 +132,4 @@ function fillCircle(ctx, x, y, radius, color) {
   ctx.fillStyle = color;
   ctx.fill();
   ctx.stroke();
-}
-
-function populateWorld(world, count) {
-  while (count > 0) {
-    //let radius = randomInt(6, 10);
-    let radius = 5;
-    let p = Particle.new(
-      Vec2.new(
-        randomInt(radius, WIDTH - radius),
-        randomInt(radius, HEIGHT - radius),
-      ),
-      Vec2.new(randomInt(-250, 250), randomInt(-250, 250)),
-      radius,
-    );
-    if (world.try_push(p)) {
-      count--;
-    }
-  }
-}
-
-function randomParticle() {
-  let radius = 7;
-  return Particle.new(
-    Vec2.new(10, 200),
-    Vec2.new(1000, 0),
-    radius,
-  );
-}
-
-function randomInt(min, max) {
-  min = Math.ceil(min); // Ensure min is rounded up to the nearest integer
-  max = Math.floor(max); // Ensure max is rounded down to the nearest integer
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
