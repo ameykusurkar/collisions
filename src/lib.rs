@@ -47,30 +47,25 @@ impl Particle {
     fn step(&mut self, dt: f32, drag: f32) {
         self.pos = self.pos + self.vel * dt;
         self.vel = self.vel * drag;
-        if self.vel.dot(self.vel) < 1e-2 {
+        self.vel = self.vel + Vec2(0.0, 500.0) * dt;
+        if self.vel.dot(self.vel).abs() < 1e-2 {
             self.vel = Vec2(0.0, 0.0);
         }
     }
 
     fn frame_collision(&mut self, frame: &Frame) {
-        if let Some(cx) = frame.collide_x(self) {
-            self.vel.0 = self.vel.0 * -1.0;
+        if let Some((coll_x, dx)) = frame.collide_x(self) {
+            self.vel.0 = self.vel.0 * -1.0 * 0.95;
 
-            let axis = self.pos.0 - cx;
-            let dist = axis.abs();
-            let overlap = self.radius - dist + 1e-5;
-            let axis_norm = axis / dist;
-            self.pos.0 = self.pos.0 + axis_norm * overlap;
+            let edge = self.pos.0 - dx * self.radius;
+            self.pos.0 = self.pos.0 + (coll_x - edge);
         }
 
-        if let Some(cy) = frame.collide_y(self) {
-            self.vel.1 = self.vel.1 * -1.0;
+        if let Some((coll_y, dy)) = frame.collide_y(self) {
+            self.vel.1 = self.vel.1 * -1.0 * 0.95;
 
-            let axis = self.pos.1 - cy;
-            let dist = axis.abs();
-            let overlap = self.radius - dist + 1e-5;
-            let axis_norm = axis / dist;
-            self.pos.1 = self.pos.1 + axis_norm * overlap;
+            let edge = self.pos.1 - dy * self.radius;
+            self.pos.1 = self.pos.1 + (coll_y - edge);
         }
     }
 
@@ -90,6 +85,7 @@ impl Particle {
         }
     }
 
+    // TODO: Just return the new velocity
     fn new_vel(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
         // As measured for p1 (self)
         let dpos = p1.pos - p2.pos;
@@ -101,16 +97,17 @@ impl Particle {
         let m_coeff2 = 2.0 * m2 / (m1 + m2);
 
         let dvel = dpos * coeff;
-        (p1.vel - dvel * m_coeff1, p2.vel + dvel * m_coeff2)
+        (-dvel * m_coeff1, dvel * m_coeff2)
     }
 
+    // TODO: Just return the new pos
     fn new_pos(p1: &Particle, p2: &Particle) -> (Vec2, Vec2) {
         let axis = p2.pos - p1.pos;
         let dist = axis.mag();
         let half_overlap = 0.5 * (p1.radius + p2.radius - dist);
         let axis_norm = axis / dist;
         let displacement = axis_norm * half_overlap;
-        (p1.pos - displacement, p2.pos + displacement)
+        (-displacement, displacement)
     }
 }
 
@@ -120,21 +117,21 @@ struct Frame {
 }
 
 impl Frame {
-    fn collide_x(&self, part: &Particle) -> Option<f32> {
+    fn collide_x(&self, part: &Particle) -> Option<(f32, f32)> {
         if part.pos.0 - part.radius < self.top_left.0 {
-            Some(self.top_left.0)
+            Some((self.top_left.0, 1.0))
         } else if part.pos.0 + part.radius > self.bottom_right.0 {
-            Some(self.bottom_right.0)
+            Some((self.bottom_right.0, -1.0))
         } else {
             None
         }
     }
 
-    fn collide_y(&self, part: &Particle) -> Option<f32> {
+    fn collide_y(&self, part: &Particle) -> Option<(f32, f32)> {
         if part.pos.1 - part.radius < self.top_left.1 {
-            Some(self.top_left.1)
+            Some((self.top_left.1, 1.0))
         } else if part.pos.1 + part.radius > self.bottom_right.1 {
-            Some(self.bottom_right.1)
+            Some((self.bottom_right.1, -1.0))
         } else {
             None
         }
@@ -164,6 +161,10 @@ impl World {
         }
     }
 
+    pub fn momentum(&self) -> f32 {
+        self.particles.iter().map(|p| p.vel.mag() * p.mass()).sum()
+    }
+
     pub fn num_particles(&self) -> usize {
         self.particles.len()
     }
@@ -190,39 +191,56 @@ impl World {
     }
 
     pub fn step_frame(&mut self, dt: f32, drag: f32) {
+        let num_steps = 4;
+        let sub_dt = dt / (num_steps as f32);
+
+        for _ in 0..num_steps {
+            self.step_dt(sub_dt, drag);
+        }
+    }
+
+    pub fn step_dt(&mut self, dt: f32, drag: f32) {
         for part in self.particles.iter_mut() {
             part.step(dt, drag);
         }
 
-        let mut new_vels: Vec<Option<Vec2>> = vec![None; self.particles.len()];
-        let mut new_pos: Vec<Option<Vec2>> = vec![None; self.particles.len()];
+        // TODO: Update the actual particles
+        let mut dvel: Vec<Vec2> = self.particles.iter().map(|p| p.vel).collect();
+        let mut dpos: Vec<Vec2> = self.particles.iter().map(|p| p.pos).collect();
 
         for (i1, i2) in Pairs::new(self.particles.len()) {
             let part1 = &self.particles[i1];
             let part2 = &self.particles[i2];
 
-            // TODO: Can a particle collide with multiple particles per frame?
-            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(part2) {
-                new_vels[i1] = Some(*vel1);
-                new_vels[i2] = Some(*vel2);
-                new_pos[i1] = Some(*pos1);
-                new_pos[i2] = Some(*pos2);
+            let part1 = Particle {
+                pos: dpos[i1],
+                vel: dvel[i1],
+                radius: part1.radius,
+            };
+            let part2 = Particle {
+                pos: dpos[i2],
+                vel: dvel[i2],
+                radius: part2.radius,
+            };
+
+            if let Some(((vel1, vel2), (pos1, pos2))) = &part1.collide(&part2) {
+                dvel[i1] = dvel[i1] + *vel1;
+                dvel[i2] = dvel[i2] + *vel2;
+                dpos[i1] = dpos[i1] + *pos1;
+                dpos[i2] = dpos[i2] + *pos2;
+
+                self.colors[i1].0 = self.colors[i1].0.wrapping_sub(1);
+                self.colors[i2].2 = self.colors[i2].2.wrapping_add(1);
+                dvel[i1] = dvel[i1] * 0.99;
+                dvel[i2] = dvel[i2] * 0.99;
             }
         }
 
         // TODO: Unify how particle-particle and particle-frame collisions are done
         for (i, part) in self.particles.iter_mut().enumerate() {
-            if let Some(v) = new_vels[i] {
-                part.vel = v;
-                self.colors[i].0 = self.colors[i].0.wrapping_sub(10);
-                self.colors[i].2 = self.colors[i].2.wrapping_add(10);
-            } else {
-                part.frame_collision(&self.frame);
-            }
-
-            if let Some(p) = new_pos[i] {
-                part.pos = p;
-            }
+            part.vel = dvel[i];
+            part.pos = dpos[i];
+            part.frame_collision(&self.frame);
         }
     }
 }

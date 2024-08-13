@@ -78,6 +78,10 @@ export class World {
 /**
 * @returns {number}
 */
+  momentum(): number;
+/**
+* @returns {number}
+*/
   num_particles(): number;
 /**
 * @returns {number}
@@ -98,6 +102,11 @@ export class World {
 * @param {number} drag
 */
   step_frame(dt: number, drag: number): void;
+/**
+* @param {number} dt
+* @param {number} drag
+*/
+  step_dt(dt: number, drag: number): void;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -130,11 +139,13 @@ export interface InitOutput {
   readonly particle_contains: (a: number, b: number) => number;
   readonly __wbg_world_free: (a: number) => void;
   readonly world_new: (a: number, b: number) => number;
+  readonly world_momentum: (a: number) => number;
   readonly world_num_particles: (a: number) => number;
   readonly world_particles: (a: number) => number;
   readonly world_colors: (a: number) => number;
   readonly world_try_push: (a: number, b: number) => number;
   readonly world_step_frame: (a: number, b: number, c: number) => void;
+  readonly world_step_dt: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

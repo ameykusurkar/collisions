@@ -296,6 +296,13 @@ export class World {
     /**
     * @returns {number}
     */
+    momentum() {
+        const ret = wasm.world_momentum(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+    * @returns {number}
+    */
     num_particles() {
         const ret = wasm.world_num_particles(this.__wbg_ptr);
         return ret >>> 0;
@@ -331,6 +338,13 @@ export class World {
     */
     step_frame(dt, drag) {
         wasm.world_step_frame(this.__wbg_ptr, dt, drag);
+    }
+    /**
+    * @param {number} dt
+    * @param {number} drag
+    */
+    step_dt(dt, drag) {
+        wasm.world_step_dt(this.__wbg_ptr, dt, drag);
     }
 }
 

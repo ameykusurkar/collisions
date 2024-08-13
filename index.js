@@ -7,16 +7,20 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const dragRange = document.getElementById('dragRange');
 const dragValue = document.getElementById('dragValue');
+const momentumValue = document.getElementById('momentumValue');
 
 var world = null;
 var memory = null;
 var mousedown = false;
 var phantomParticle = null;
 
+var totalParticles = 0;
+var totalFrames = 0;
+
 init().then((instance) => {
   memory = instance.memory;
   world = World.new(WIDTH, HEIGHT);
-  populateWorld(world, 30);
+  //populateWorld(world, 1000);
 
   canvas.addEventListener('mousedown', function(event) {
     if (event.button === 0) {
@@ -75,6 +79,13 @@ const renderLoop = () => {
   // TODO: Calculate frame interval
   world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value));
   dragValue.textContent = dragRange.value;
+  momentumValue.textContent = world.momentum();
+
+  if (totalParticles < 1000) {
+    if (world.try_push(randomParticle())) {
+      totalParticles++;
+    }
+  }
 
   render(memory, world);
 
@@ -125,21 +136,30 @@ function fillCircle(ctx, x, y, radius, color) {
 }
 
 function populateWorld(world, count) {
-  let radius = 15;
-
   while (count > 0) {
+    //let radius = randomInt(6, 10);
+    let radius = 5;
     let p = Particle.new(
       Vec2.new(
         randomInt(radius, WIDTH - radius),
         randomInt(radius, HEIGHT - radius),
       ),
-      Vec2.new(350.0, 350.0),
+      Vec2.new(randomInt(-250, 250), randomInt(-250, 250)),
       radius,
     );
     if (world.try_push(p)) {
       count--;
     }
   }
+}
+
+function randomParticle() {
+  let radius = 7;
+  return Particle.new(
+    Vec2.new(10, 200),
+    Vec2.new(1000, 0),
+    radius,
+  );
 }
 
 function randomInt(min, max) {
