@@ -188,11 +188,10 @@ impl World {
         true
     }
 
-    pub fn step_frame(&mut self, dt: f32, drag: f32) {
-        let num_steps = 4;
-        let sub_dt = dt / (num_steps as f32);
+    pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize) {
+        let sub_dt = dt / (steps as f32);
 
-        for _ in 0..num_steps {
+        for _ in 0..steps {
             self.step_dt(sub_dt, drag);
         }
     }

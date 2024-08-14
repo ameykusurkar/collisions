@@ -2,21 +2,27 @@ import init, { Particle, Vec2, World } from "./pkg/collisions.js";
 
 const WIDTH = 1200;
 const HEIGHT = 800;
+const RADIUS = 7;
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const dragRange = document.getElementById('dragRange');
 const dragValue = document.getElementById('dragValue');
-const momentumValue = document.getElementById('momentumValue');
+const fpsValue = document.getElementById('fpsValue');
+const totalParticlesValue = document.getElementById('totalParticlesValue');
+const addParticles = document.getElementById('addParticles');
 
-var world = null;
-var memory = null;
-var mousedown = false;
-var phantomParticle = null;
+let world = null;
+let memory = null;
+let mousedown = false;
+let phantomParticle = null;
 
-var totalParticles = 0;
+let totalParticles = 0;
+let lastReported = 0;
+let frameCount = 0;
 
 init().then((instance) => {
+  addParticles.checked = true;
   memory = instance.memory;
   world = World.new(WIDTH, HEIGHT);
 
@@ -27,7 +33,7 @@ init().then((instance) => {
       const mx = event.clientX - rect.left;
       const my = event.clientY - rect.top;
       phantomParticle = {
-        radius: 15,
+        radius: RADIUS,
         // TODO: Need to subtract border/padding to ensure this is within canvas bounds
         px: mx,
         py: my,
@@ -42,7 +48,6 @@ init().then((instance) => {
       const my = event.clientY - rect.top;
       phantomParticle['currX'] = mx;
       phantomParticle['currY'] = my;
-      console.log(mx, my);
     }
   });
 
@@ -63,7 +68,9 @@ init().then((instance) => {
         const pos = Vec2.new(phantomParticle['px'], phantomParticle['py']);
         const velK = 2;
         const vel = Vec2.new((phantomParticle['px'] - mx) * velK, (phantomParticle['py'] - my) * velK);
-        world.try_push(Particle.new(pos, vel, phantomParticle['radius']));
+        if (world.try_push(Particle.new(pos, vel, phantomParticle['radius']))) {
+          totalParticles++;
+        }
       }
       mousedown = false;
       phantomParticle = null;
@@ -75,12 +82,22 @@ init().then((instance) => {
 
 const renderLoop = () => {
   // TODO: Calculate frame interval
-  world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value));
+  world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8);
   dragValue.textContent = dragRange.value;
-  momentumValue.textContent = world.momentum();
+  totalParticlesValue.textContent = totalParticles;
 
-  if (totalParticles < 1000) {
-    let p = Particle.new(Vec2.new(10, 200), Vec2.new(1000, 0), 7);
+  frameCount++;
+  const now = Date.now();
+  const elapsed = now - lastReported;
+
+  if (elapsed > 500) {
+    fpsValue.textContent = (1000 * frameCount / elapsed).toFixed(2);
+    frameCount = 0;
+    lastReported = now;
+  }
+
+  if (addParticles.checked) {
+    let p = Particle.new(Vec2.new(10, 200), Vec2.new(1000, 0), RADIUS);
     if (world.try_push(p)) {
       totalParticles++;
     }

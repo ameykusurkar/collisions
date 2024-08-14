@@ -100,8 +100,9 @@ export class World {
 /**
 * @param {number} dt
 * @param {number} drag
+* @param {number} steps
 */
-  step_frame(dt: number, drag: number): void;
+  step_frame(dt: number, drag: number, steps: number): void;
 /**
 * @param {number} dt
 * @param {number} drag
@@ -136,7 +137,7 @@ export interface InitOutput {
   readonly world_particles: (a: number) => number;
   readonly world_colors: (a: number) => number;
   readonly world_try_push: (a: number, b: number) => number;
-  readonly world_step_frame: (a: number, b: number, c: number) => void;
+  readonly world_step_frame: (a: number, b: number, c: number, d: number) => void;
   readonly world_step_dt: (a: number, b: number, c: number) => void;
   readonly __wbg_vec2_free: (a: number) => void;
   readonly __wbg_get_vec2_0: (a: number) => number;
