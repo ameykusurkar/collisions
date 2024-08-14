@@ -10,6 +10,7 @@ const dragRange = document.getElementById('dragRange');
 const dragValue = document.getElementById('dragValue');
 const fpsValue = document.getElementById('fpsValue');
 const totalParticlesValue = document.getElementById('totalParticlesValue');
+const collisionChecksPerSecondValue = document.getElementById('collisionChecksPerSecondValue');
 const addParticles = document.getElementById('addParticles');
 
 let world = null;
@@ -20,6 +21,7 @@ let phantomParticle = null;
 let totalParticles = 0;
 let lastReported = 0;
 let frameCount = 0;
+let collisionCheckCount = 0;
 
 init().then((instance) => {
   addParticles.checked = true;
@@ -82,7 +84,7 @@ init().then((instance) => {
 
 const renderLoop = () => {
   // TODO: Calculate frame interval
-  world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8);
+  collisionCheckCount += world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8);
   dragValue.textContent = dragRange.value;
   totalParticlesValue.textContent = totalParticles;
 
@@ -90,8 +92,10 @@ const renderLoop = () => {
   const now = Date.now();
   const elapsed = now - lastReported;
 
-  if (elapsed > 500) {
+  if (elapsed > 1000) {
     fpsValue.textContent = (1000 * frameCount / elapsed).toFixed(2);
+    collisionChecksPerSecondValue.textContent = (1000 * collisionCheckCount / elapsed).toLocaleString();
+    collisionCheckCount = 0;
     frameCount = 0;
     lastReported = now;
   }

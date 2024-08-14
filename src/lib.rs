@@ -188,19 +188,23 @@ impl World {
         true
     }
 
-    pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize) {
+    pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize) -> u32 {
         let sub_dt = dt / (steps as f32);
 
+        let mut collision_checks = 0;
         for _ in 0..steps {
-            self.step_dt(sub_dt, drag);
+            collision_checks += self.step_dt(sub_dt, drag);
         }
+
+        collision_checks
     }
 
-    pub fn step_dt(&mut self, dt: f32, drag: f32) {
+    pub fn step_dt(&mut self, dt: f32, drag: f32) -> u32 {
         for part in self.particles.iter_mut() {
             part.step(dt, drag);
         }
 
+        let mut collision_checks = 0;
         for (i1, i2) in Pairs::new(0..self.particles.len()) {
             // Split the array into non-overlapping slices to convince the borrow checker
             // that p1 and p2 are pointing to different particles.
@@ -219,11 +223,14 @@ impl World {
                 self.colors[i1].0 = self.colors[i1].0.wrapping_sub(1);
                 self.colors[i2].2 = self.colors[i2].2.wrapping_add(1);
             }
+            collision_checks += 1;
         }
 
         // TODO: Unify how particle-particle and particle-frame collisions are done
         for p in self.particles.iter_mut() {
             p.frame_collision(&self.frame);
         }
+
+        collision_checks
     }
 }

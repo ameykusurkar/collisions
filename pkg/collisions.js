@@ -336,16 +336,20 @@ export class World {
     * @param {number} dt
     * @param {number} drag
     * @param {number} steps
+    * @returns {number}
     */
     step_frame(dt, drag, steps) {
-        wasm.world_step_frame(this.__wbg_ptr, dt, drag, steps);
+        const ret = wasm.world_step_frame(this.__wbg_ptr, dt, drag, steps);
+        return ret >>> 0;
     }
     /**
     * @param {number} dt
     * @param {number} drag
+    * @returns {number}
     */
     step_dt(dt, drag) {
-        wasm.world_step_dt(this.__wbg_ptr, dt, drag);
+        const ret = wasm.world_step_dt(this.__wbg_ptr, dt, drag);
+        return ret >>> 0;
     }
 }
 

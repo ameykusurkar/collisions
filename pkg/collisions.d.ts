@@ -101,13 +101,15 @@ export class World {
 * @param {number} dt
 * @param {number} drag
 * @param {number} steps
+* @returns {number}
 */
-  step_frame(dt: number, drag: number, steps: number): void;
+  step_frame(dt: number, drag: number, steps: number): number;
 /**
 * @param {number} dt
 * @param {number} drag
+* @returns {number}
 */
-  step_dt(dt: number, drag: number): void;
+  step_dt(dt: number, drag: number): number;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -137,8 +139,8 @@ export interface InitOutput {
   readonly world_particles: (a: number) => number;
   readonly world_colors: (a: number) => number;
   readonly world_try_push: (a: number, b: number) => number;
-  readonly world_step_frame: (a: number, b: number, c: number, d: number) => void;
-  readonly world_step_dt: (a: number, b: number, c: number) => void;
+  readonly world_step_frame: (a: number, b: number, c: number, d: number) => number;
+  readonly world_step_dt: (a: number, b: number, c: number) => number;
   readonly __wbg_vec2_free: (a: number) => void;
   readonly __wbg_get_vec2_0: (a: number) => number;
   readonly __wbg_set_vec2_0: (a: number, b: number) => void;
