@@ -83,8 +83,11 @@ init().then((instance) => {
 });
 
 const renderLoop = () => {
+  const alg = document.querySelector('input[name="collision"]:checked').value;
+
   // TODO: Calculate frame interval
-  collisionCheckCount += world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8);
+  collisionCheckCount += world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8, alg);
+
   dragValue.textContent = dragRange.value;
   totalParticlesValue.textContent = totalParticles;
 
@@ -101,7 +104,7 @@ const renderLoop = () => {
   }
 
   if (addParticles.checked) {
-    let p = Particle.new(Vec2.new(10, 200), Vec2.new(1000, 0), RADIUS);
+    let p = Particle.new(Vec2.new(10, 20), Vec2.new(1000, 0), RADIUS);
     if (world.try_push(p)) {
       totalParticles++;
     }

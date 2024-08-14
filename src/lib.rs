@@ -31,6 +31,14 @@ pub struct Particle {
 }
 
 #[wasm_bindgen]
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum CollisionAlgorithm {
+    Pairwise = 0,
+    SweepAndPrune = 1,
+}
+
+#[wasm_bindgen]
 impl Particle {
     pub fn new(pos: Vec2, vel: Vec2, radius: f32) -> Self {
         Self { pos, vel, radius }
@@ -188,23 +196,38 @@ impl World {
         true
     }
 
-    pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize) -> u32 {
+    pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize, alg: CollisionAlgorithm) -> u32 {
         let sub_dt = dt / (steps as f32);
 
         let mut collision_checks = 0;
         for _ in 0..steps {
-            collision_checks += self.step_dt(sub_dt, drag);
+            collision_checks += self.step_dt(sub_dt, drag, alg);
         }
 
         collision_checks
     }
 
-    pub fn step_dt(&mut self, dt: f32, drag: f32) -> u32 {
+    fn step_dt(&mut self, dt: f32, drag: f32, alg: CollisionAlgorithm) -> u32 {
         for part in self.particles.iter_mut() {
             part.step(dt, drag);
         }
 
+        let collision_checks = match alg {
+            CollisionAlgorithm::Pairwise => self.collisions_pairwise(),
+            CollisionAlgorithm::SweepAndPrune => self.collisions_sweep_and_prune(),
+        };
+
+        // TODO: Unify how particle-particle and particle-frame collisions are done
+        for p in self.particles.iter_mut() {
+            p.frame_collision(&self.frame);
+        }
+
+        collision_checks
+    }
+
+    fn collisions_pairwise(&mut self) -> u32 {
         let mut collision_checks = 0;
+
         for (i1, i2) in Pairs::new(0..self.particles.len()) {
             // Split the array into non-overlapping slices to convince the borrow checker
             // that p1 and p2 are pointing to different particles.
@@ -226,9 +249,40 @@ impl World {
             collision_checks += 1;
         }
 
-        // TODO: Unify how particle-particle and particle-frame collisions are done
-        for p in self.particles.iter_mut() {
-            p.frame_collision(&self.frame);
+        collision_checks
+    }
+
+    fn collisions_sweep_and_prune(&mut self) -> u32 {
+        let mut collision_checks = 0;
+
+        self.particles
+            .sort_unstable_by_key(|p| (p.pos.0 - p.radius) as i32);
+
+        for i1 in 0..self.particles.len() {
+            for i2 in (i1 + 1)..self.particles.len() {
+                // Split the array into non-overlapping slices to convince the borrow checker
+                // that p1 and p2 are pointing to different particles.
+                // TODO: `Pairs` should handle this and yield mut references when iterating.
+                let (fst, rem) = self.particles.split_at_mut(i2);
+                let p1 = &mut fst[i1];
+                let p2 = &mut rem[0];
+
+                if p1.pos.0 + p1.radius < p2.pos.0 - p2.radius {
+                    break;
+                }
+
+                if let Some(((vel1, vel2), (pos1, pos2))) = p1.collide(p2) {
+                    p1.vel = vel1 * 0.99;
+                    p2.vel = vel2 * 0.99;
+
+                    p1.pos = pos1;
+                    p2.pos = pos2;
+
+                    self.colors[i1].0 = self.colors[i1].0.wrapping_sub(1);
+                    self.colors[i2].2 = self.colors[i2].2.wrapping_add(1);
+                }
+                collision_checks += 1;
+            }
         }
 
         collision_checks
