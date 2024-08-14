@@ -201,7 +201,7 @@ impl World {
             part.step(dt, drag);
         }
 
-        for (i1, i2) in Pairs::new(self.particles.len()) {
+        for (i1, i2) in Pairs::new(0..self.particles.len()) {
             // Split the array into non-overlapping slices to convince the borrow checker
             // that p1 and p2 are pointing to different particles.
             // TODO: `Pairs` should handle this and yield mut references when iterating.

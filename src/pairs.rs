@@ -1,20 +1,19 @@
+use std::ops::Range;
+
 pub struct Pairs {
-    outer: std::ops::Range<usize>,
-    inner: std::ops::Range<usize>,
+    outer: Range<usize>,
+    inner: Range<usize>,
     curr_outer: usize,
-    limit: usize,
 }
 
 impl Pairs {
-    pub fn new(limit: usize) -> Self {
-        let mut outer = 0..limit;
-        let curr_outer = outer.next().unwrap_or(0);
-        let inner = (curr_outer + 1)..limit;
+    pub fn new(mut outer: Range<usize>) -> Self {
+        let curr_outer = outer.next().unwrap_or(outer.start);
+        let inner = (curr_outer + 1)..outer.end;
         Self {
             curr_outer,
             outer,
             inner,
-            limit,
         }
     }
 }
@@ -27,7 +26,7 @@ impl Iterator for Pairs {
             Some(r) => r,
             None => {
                 self.curr_outer = self.outer.next()?;
-                self.inner = (self.curr_outer + 1)..self.limit;
+                self.inner = (self.curr_outer + 1)..(self.outer.end);
                 self.inner.next()?
             }
         };
@@ -41,26 +40,26 @@ mod tests {
 
     #[test]
     fn empty() {
-        let mut pairs = Pairs::new(0);
+        let mut pairs = Pairs::new(4..4);
         assert_eq!(pairs.next(), None);
     }
 
     #[test]
     fn one() {
-        let mut pairs = Pairs::new(1);
+        let mut pairs = Pairs::new(1..2);
         assert_eq!(pairs.next(), None);
     }
 
     #[test]
     fn two() {
-        let mut pairs = Pairs::new(2);
-        assert_eq!(pairs.next(), Some((0, 1)));
+        let mut pairs = Pairs::new(5..7);
+        assert_eq!(pairs.next(), Some((5, 6)));
         assert_eq!(pairs.next(), None);
     }
 
     #[test]
     fn it_works() {
-        let mut pairs = Pairs::new(4);
+        let mut pairs = Pairs::new(0..4);
         assert_eq!(pairs.next(), Some((0, 1)));
         assert_eq!(pairs.next(), Some((0, 2)));
         assert_eq!(pairs.next(), Some((0, 3)));
