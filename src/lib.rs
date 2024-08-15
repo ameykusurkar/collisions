@@ -255,6 +255,8 @@ impl World {
     fn collisions_sweep_and_prune(&mut self) -> u32 {
         let mut collision_checks = 0;
 
+        // TODO: Insertion sort is faster since most particles barely change between iterations.
+        // Swaps can be done in the loop itself.
         self.particles
             .sort_unstable_by_key(|p| (p.pos.0 - p.radius) as i32);
 
