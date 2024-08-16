@@ -62,18 +62,11 @@ impl Particle {
     }
 
     fn frame_collision(&mut self, frame: &Frame) {
-        if let Some((coll_x, dx)) = frame.collide_x(self) {
-            self.vel.0 = self.vel.0 * -1.0 * 0.95;
-
-            let edge = self.pos.0 - dx * self.radius;
-            self.pos.0 = self.pos.0 + (coll_x - edge);
-        }
-
-        if let Some((coll_y, dy)) = frame.collide_y(self) {
-            self.vel.1 = self.vel.1 * -1.0 * 0.95;
-
-            let edge = self.pos.1 - dy * self.radius;
-            self.pos.1 = self.pos.1 + (coll_y - edge);
+        for segment in &frame.segments {
+            if let Some((new_vel, new_pos)) = segment.collide(self) {
+                self.vel = new_vel * 0.95;
+                self.pos = new_pos;
+            }
         }
     }
 
@@ -118,30 +111,69 @@ impl Particle {
 }
 
 struct Frame {
-    top_left: Vec2,
-    bottom_right: Vec2,
+    segments: Vec<LineSegment>,
 }
 
 impl Frame {
-    fn collide_x(&self, part: &Particle) -> Option<(f32, f32)> {
-        if part.pos.0 - part.radius < self.top_left.0 {
-            Some((self.top_left.0, 1.0))
-        } else if part.pos.0 + part.radius > self.bottom_right.0 {
-            Some((self.bottom_right.0, -1.0))
+    // TODO: Make this work for frames that are not axis-aligned
+    fn new_axis_aligned(top_left: Vec2, bottom_right: Vec2) -> Self {
+        let width = bottom_right.0 - top_left.0;
+        let height = bottom_right.1 - top_left.1;
+        Self {
+            segments: vec![
+                // Top
+                LineSegment::new(top_left, top_left + Vec2(width, 0.0)),
+                // Left
+                LineSegment::new(top_left, top_left + Vec2(0.0, height)),
+                // Bottom
+                LineSegment::new(bottom_right, bottom_right - Vec2(width, 0.0)),
+                // Right
+                LineSegment::new(bottom_right, bottom_right - Vec2(0.0, height)),
+            ],
+        }
+    }
+}
+
+struct LineSegment {
+    start: Vec2,
+    n: Vec2,
+}
+
+impl LineSegment {
+    fn new(start: Vec2, end: Vec2) -> Self {
+        let n = end - start;
+        Self { n, start }
+    }
+
+    fn closest_point(&self, p: Vec2) -> Option<Vec2> {
+        let pa = p - self.start;
+        let t = Vec2::dot(pa, self.n) / Vec2::dot(self.n, self.n);
+
+        if 0.0 <= t && t <= 1.0 {
+            Some(self.start + self.n * t)
         } else {
             None
         }
     }
 
-    fn collide_y(&self, part: &Particle) -> Option<(f32, f32)> {
-        if part.pos.1 - part.radius < self.top_left.1 {
-            Some((self.top_left.1, 1.0))
-        } else if part.pos.1 + part.radius > self.bottom_right.1 {
-            Some((self.bottom_right.1, -1.0))
+    fn collide(&self, part: &Particle) -> Option<(Vec2, Vec2)> {
+        let closest = self.closest_point(part.pos)?;
+
+        let dist = Vec2::dist(closest, part.pos);
+        if dist < part.radius {
+            let normal = (part.pos - closest) / dist;
+            let new_vel = reflect(part.vel, normal);
+            let new_pos = closest + normal * part.radius;
+
+            Some((new_vel, new_pos))
         } else {
             None
         }
     }
+}
+
+fn reflect(incident: Vec2, normal: Vec2) -> Vec2 {
+    incident - normal * 2.0 * incident.dot(normal)
 }
 
 #[wasm_bindgen]
@@ -155,10 +187,7 @@ pub struct World {
 #[wasm_bindgen]
 impl World {
     pub fn new(width: usize, height: usize) -> Self {
-        let frame = Frame {
-            top_left: Vec2(0.0, 0.0),
-            bottom_right: Vec2(width as f32, height as f32),
-        };
+        let frame = Frame::new_axis_aligned(Vec2(0.0, 0.0), Vec2(width as f32, height as f32));
 
         Self {
             frame,
