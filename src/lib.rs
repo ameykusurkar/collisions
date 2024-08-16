@@ -61,8 +61,9 @@ impl Particle {
         }
     }
 
-    fn frame_collision(&mut self, frame: &Frame) {
-        for segment in &frame.segments {
+    // TODO: Take in one segment rather than Vec
+    fn collide_segments(&mut self, segments: &Vec<LineSegment>) {
+        for segment in segments {
             if let Some((new_vel, new_pos)) = segment.collide(self) {
                 self.vel = new_vel * 0.95;
                 self.pos = new_pos;
@@ -110,28 +111,19 @@ impl Particle {
     }
 }
 
-struct Frame {
-    segments: Vec<LineSegment>,
-}
-
-impl Frame {
-    // TODO: Make this work for frames that are not axis-aligned
-    fn new_axis_aligned(top_left: Vec2, bottom_right: Vec2) -> Self {
-        let width = bottom_right.0 - top_left.0;
-        let height = bottom_right.1 - top_left.1;
-        Self {
-            segments: vec![
-                // Top
-                LineSegment::new(top_left, top_left + Vec2(width, 0.0)),
-                // Left
-                LineSegment::new(top_left, top_left + Vec2(0.0, height)),
-                // Bottom
-                LineSegment::new(bottom_right, bottom_right - Vec2(width, 0.0)),
-                // Right
-                LineSegment::new(bottom_right, bottom_right - Vec2(0.0, height)),
-            ],
-        }
-    }
+fn axis_aligned_frame(top_left: Vec2, bottom_right: Vec2) -> Vec<LineSegment> {
+    let width = bottom_right.0 - top_left.0;
+    let height = bottom_right.1 - top_left.1;
+    vec![
+        // Top
+        LineSegment::new(top_left, top_left + Vec2(width, 0.0)),
+        // Left
+        LineSegment::new(top_left, top_left + Vec2(0.0, height)),
+        // Bottom
+        LineSegment::new(bottom_right, bottom_right - Vec2(width, 0.0)),
+        // Right
+        LineSegment::new(bottom_right, bottom_right - Vec2(0.0, height)),
+    ]
 }
 
 struct LineSegment {
@@ -178,8 +170,7 @@ fn reflect(incident: Vec2, normal: Vec2) -> Vec2 {
 
 #[wasm_bindgen]
 pub struct World {
-    frame: Frame,
-    // TODO: Do these need to be public, or can we have a method?
+    segments: Vec<LineSegment>,
     particles: Vec<Particle>,
     colors: Vec<Color>,
 }
@@ -187,10 +178,10 @@ pub struct World {
 #[wasm_bindgen]
 impl World {
     pub fn new(width: usize, height: usize) -> Self {
-        let frame = Frame::new_axis_aligned(Vec2(0.0, 0.0), Vec2(width as f32, height as f32));
+        let segments = axis_aligned_frame(Vec2(0.0, 0.0), Vec2(width as f32, height as f32));
 
         Self {
-            frame,
+            segments,
             particles: Vec::new(),
             colors: Vec::new(),
         }
@@ -210,6 +201,10 @@ impl World {
 
     pub fn colors(&self) -> *const Color {
         self.colors.as_ptr()
+    }
+
+    pub fn push_segment(&mut self, start: Vec2, end: Vec2) {
+        self.segments.push(LineSegment::new(start, end));
     }
 
     /// Adds the particle to the world if the space is unoccupied.
@@ -248,7 +243,7 @@ impl World {
 
         // TODO: Unify how particle-particle and particle-frame collisions are done
         for p in self.particles.iter_mut() {
-            p.frame_collision(&self.frame);
+            p.collide_segments(&self.segments);
         }
 
         collision_checks
@@ -271,9 +266,6 @@ impl World {
 
                 p1.pos = pos1;
                 p2.pos = pos2;
-
-                self.colors[i1].0 = self.colors[i1].0.wrapping_sub(1);
-                self.colors[i2].2 = self.colors[i2].2.wrapping_add(1);
             }
             collision_checks += 1;
         }

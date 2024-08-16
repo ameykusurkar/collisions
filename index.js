@@ -17,6 +17,7 @@ let world = null;
 let memory = null;
 let mousedown = false;
 let phantomParticle = null;
+let segments = [];
 
 let totalParticles = 0;
 let lastReported = 0;
@@ -26,7 +27,13 @@ let collisionCheckCount = 0;
 init().then((instance) => {
   addParticles.checked = true;
   memory = instance.memory;
+
   world = World.new(WIDTH, HEIGHT);
+
+  // Add a box
+  addSegment(600, 500, 1200, 500); // Bottom
+  addSegment(600, 500, 600, 400); // Left
+  addSegment(1200, 500, 1200, 400); // Right
 
   canvas.addEventListener('mousedown', function(event) {
     if (event.button === 0) {
@@ -70,9 +77,8 @@ init().then((instance) => {
         const pos = Vec2.new(phantomParticle['px'], phantomParticle['py']);
         const velK = 2;
         const vel = Vec2.new((phantomParticle['px'] - mx) * velK, (phantomParticle['py'] - my) * velK);
-        if (world.try_push(Particle.new(pos, vel, phantomParticle['radius']))) {
-          totalParticles++;
-        }
+
+        tryAddParticle(Particle.new(pos, vel, phantomParticle['radius']));
       }
       mousedown = false;
       phantomParticle = null;
@@ -105,9 +111,7 @@ const renderLoop = () => {
 
   if (addParticles.checked) {
     let p = Particle.new(Vec2.new(10, 20), Vec2.new(1000, 0), RADIUS);
-    if (world.try_push(p)) {
-      totalParticles++;
-    }
+    tryAddParticle(p);
   }
 
   render(memory, world);
@@ -117,17 +121,28 @@ const renderLoop = () => {
 
 function render(memory, world) {
   const particleBuffer = new Float32Array(memory.buffer, world.particles(), world.num_particles() * 5);
-  const colorBuffer = new Uint8Array(memory.buffer, world.colors(), world.num_particles() * 3);
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  for (let i = 0; i < world.num_particles(); i++) {
+  const num_particles = world.num_particles();
+  for (let i = 0; i < num_particles; i++) {
+    const red = Math.ceil(255 - 255 * (i / num_particles));
+    const blue = Math.ceil(255 * (i / num_particles));
     fillCircle(
       ctx,
       particleBuffer[i * 5 + 0], // pos x
       particleBuffer[i * 5 + 1], // pos y
       particleBuffer[i * 5 + 4], // radius
-      `rgb(${colorBuffer[i * 3 + 0]} ${colorBuffer[i * 3 + 1]} ${colorBuffer[i * 3 + 2]})`,
+      `rgb(${red} ${0} ${blue})`,
     )
+  }
+
+  for (const segI in segments) {
+    const seg = segments[segI];
+    ctx.strokeStyle = 'black';
+    ctx.beginPath();
+    ctx.moveTo(seg[0], seg[1]);
+    ctx.lineTo(seg[2], seg[3]);
+    ctx.stroke();
   }
 
   if (phantomParticle) {
@@ -146,6 +161,17 @@ function render(memory, world) {
       ctx.closePath();
       ctx.stroke();
     }
+  }
+}
+
+function addSegment(start1, end1, start2, end2) {
+  segments.push([start1, end1, start2, end2]);
+  world.push_segment(Vec2.new(start1, end1), Vec2.new(start2, end2));
+}
+
+function tryAddParticle(p) {
+  if (world.try_push(p)) {
+    totalParticles++;
   }
 }
 

@@ -325,6 +325,17 @@ export class World {
         return ret >>> 0;
     }
     /**
+    * @param {Vec2} start
+    * @param {Vec2} end
+    */
+    push_segment(start, end) {
+        _assertClass(start, Vec2);
+        var ptr0 = start.__destroy_into_raw();
+        _assertClass(end, Vec2);
+        var ptr1 = end.__destroy_into_raw();
+        wasm.world_push_segment(this.__wbg_ptr, ptr0, ptr1);
+    }
+    /**
     * Adds the particle to the world if the space is unoccupied.
     * @param {Particle} particle
     * @returns {boolean}

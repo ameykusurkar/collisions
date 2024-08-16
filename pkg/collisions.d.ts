@@ -98,6 +98,11 @@ export class World {
 */
   colors(): number;
 /**
+* @param {Vec2} start
+* @param {Vec2} end
+*/
+  push_segment(start: Vec2, end: Vec2): void;
+/**
 * Adds the particle to the world if the space is unoccupied.
 * @param {Particle} particle
 * @returns {boolean}
@@ -139,6 +144,7 @@ export interface InitOutput {
   readonly world_num_particles: (a: number) => number;
   readonly world_particles: (a: number) => number;
   readonly world_colors: (a: number) => number;
+  readonly world_push_segment: (a: number, b: number, c: number) => void;
   readonly world_try_push: (a: number, b: number) => number;
   readonly world_step_frame: (a: number, b: number, c: number, d: number, e: number) => number;
   readonly __wbg_vec2_free: (a: number) => void;

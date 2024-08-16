@@ -23,6 +23,7 @@ export function world_momentum(a: number): number;
 export function world_num_particles(a: number): number;
 export function world_particles(a: number): number;
 export function world_colors(a: number): number;
+export function world_push_segment(a: number, b: number, c: number): void;
 export function world_try_push(a: number, b: number): number;
 export function world_step_frame(a: number, b: number, c: number, d: number, e: number): number;
 export function __wbg_vec2_free(a: number): void;
