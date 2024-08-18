@@ -110,8 +110,10 @@ const renderLoop = () => {
   }
 
   if (addParticles.checked) {
-    let p = Particle.new(Vec2.new(10, 20), Vec2.new(1000, 0), RADIUS);
-    tryAddParticle(p);
+    for (let i = 0; i < 5; i++) {
+      let p = Particle.new(Vec2.new(10, 20 + i * 3 * RADIUS), Vec2.new(1000, 0), RADIUS);
+      tryAddParticle(p);
+    }
   }
 
   render(memory, world);
