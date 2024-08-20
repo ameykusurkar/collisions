@@ -62,12 +62,10 @@ impl Particle {
     }
 
     // TODO: Take in one segment rather than Vec
-    fn collide_segments(&mut self, segments: &Vec<LineSegment>) {
-        for segment in segments {
-            if let Some((new_vel, new_pos)) = segment.collide(self) {
-                self.vel = new_vel * 0.95;
-                self.pos = new_pos;
-            }
+    fn collide_segment(&mut self, segment: &LineSegment) {
+        if let Some((new_vel, new_pos)) = segment.collide(self) {
+            self.vel = new_vel * 0.95;
+            self.pos = new_pos;
         }
     }
 
@@ -243,7 +241,9 @@ impl World {
 
         // TODO: Unify how particle-particle and particle-frame collisions are done
         for p in self.particles.iter_mut() {
-            p.collide_segments(&self.segments);
+            for segment in &self.segments {
+                p.collide_segment(segment);
+            }
         }
 
         collision_checks
