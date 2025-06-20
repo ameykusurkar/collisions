@@ -2,7 +2,6 @@ import init, { CollisionAlgorithm, Particle, Vec2, World } from "./pkg/collision
 
 const WIDTH = 1200;
 const HEIGHT = 800;
-const RADIUS = 7;
 
 type PhantomParticle = {
   posX: number,
@@ -16,10 +15,13 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 const dragRange = document.getElementById('dragRange') as HTMLInputElement;
 const dragValue = document.getElementById('dragValue') as HTMLElement;
+const radiusRange = document.getElementById('radiusRange') as HTMLInputElement;
+const radiusValue = document.getElementById('radiusValue') as HTMLElement;
 const fpsValue = document.getElementById('fpsValue') as HTMLElement;
 const totalParticlesValue = document.getElementById('totalParticlesValue') as HTMLElement;
 const collisionChecksPerSecondValue = document.getElementById('collisionChecksPerSecondValue') as HTMLElement;
 const addParticles = document.getElementById('addParticles') as HTMLInputElement;
+const clearParticlesButton = document.getElementById('clearParticles') as HTMLButtonElement;
 
 let world: World;
 let memory: WebAssembly.Memory;
@@ -50,7 +52,7 @@ init().then((instance) => {
       const mx = event.clientX - rect.left;
       const my = event.clientY - rect.top;
       phantomParticle = {
-        radius: RADIUS,
+        radius: parseFloat(radiusRange.value),
         // TODO: Need to subtract border/padding to ensure this is within canvas bounds
         posX: mx,
         posY: my,
@@ -95,6 +97,11 @@ init().then((instance) => {
     }
   });
 
+  clearParticlesButton.addEventListener('click', function() {
+    world.clear_particles();
+    totalParticles = 0;
+  });
+
   requestAnimationFrame(renderLoop);
 });
 
@@ -105,6 +112,7 @@ const renderLoop = () => {
   collisionCheckCount += world.step_frame(1.0 / 60, 1 - parseFloat(dragRange.value), 8, alg);
 
   dragValue.textContent = dragRange.value;
+  radiusValue.textContent = radiusRange.value;
   totalParticlesValue.textContent = totalParticles.toString();
 
   frameCount++;
@@ -120,8 +128,9 @@ const renderLoop = () => {
   }
 
   if (addParticles.checked) {
+    const currentRadius = parseFloat(radiusRange.value);
     for (let i = 0; i < 5; i++) {
-      let p = Particle.new(Vec2.new(10, 20 + i * 3 * RADIUS), Vec2.new(1000, 0), RADIUS);
+      let p = Particle.new(Vec2.new(10, 20 + i * 3 * currentRadius), Vec2.new(1000, 0), currentRadius);
       tryAddParticle(p);
     }
   }

@@ -109,6 +109,10 @@ export class World {
 */
   try_push(particle: Particle): boolean;
 /**
+* Clears all particles from the world.
+*/
+  clear_particles(): void;
+/**
 * @param {number} dt
 * @param {number} drag
 * @param {number} steps
@@ -146,6 +150,7 @@ export interface InitOutput {
   readonly world_colors: (a: number) => number;
   readonly world_push_segment: (a: number, b: number, c: number) => void;
   readonly world_try_push: (a: number, b: number) => number;
+  readonly world_clear_particles: (a: number) => void;
   readonly world_step_frame: (a: number, b: number, c: number, d: number, e: number) => number;
   readonly __wbg_vec2_free: (a: number) => void;
   readonly __wbg_get_vec2_0: (a: number) => number;

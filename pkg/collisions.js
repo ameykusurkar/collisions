@@ -347,6 +347,12 @@ export class World {
         return ret !== 0;
     }
     /**
+    * Clears all particles from the world.
+    */
+    clear_particles() {
+        wasm.world_clear_particles(this.__wbg_ptr);
+    }
+    /**
     * @param {number} dt
     * @param {number} drag
     * @param {number} steps

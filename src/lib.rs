@@ -218,6 +218,12 @@ impl World {
         true
     }
 
+    /// Clears all particles from the world.
+    pub fn clear_particles(&mut self) {
+        self.particles.clear();
+        self.colors.clear();
+    }
+
     pub fn step_frame(&mut self, dt: f32, drag: f32, steps: usize, alg: CollisionAlgorithm) -> u32 {
         let sub_dt = dt / (steps as f32);
 
