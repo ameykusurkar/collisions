@@ -90,10 +90,17 @@ impl Particle {
         let dpos = p1.pos - p2.pos;
         let coeff = Vec2::dot(p1.vel - p2.vel, dpos) / Vec2::dot(dpos, dpos);
 
+        // coeff >= 0 means the particles are already separating; bouncing them
+        // would send them back into each other.
+        if coeff >= 0.0 {
+            return (p1.vel, p2.vel);
+        }
+
         let m1 = p1.mass();
         let m2 = p2.mass();
-        let m_coeff1 = 2.0 * m1 / (m1 + m2);
-        let m_coeff2 = 2.0 * m2 / (m1 + m2);
+        // Each particle's velocity change is scaled by the *other* particle's mass.
+        let m_coeff1 = 2.0 * m2 / (m1 + m2);
+        let m_coeff2 = 2.0 * m1 / (m1 + m2);
 
         let dvel = dpos * coeff;
         (p1.vel - dvel * m_coeff1, p2.vel + dvel * m_coeff2)
@@ -135,24 +142,26 @@ impl LineSegment {
         Self { n, start }
     }
 
-    fn closest_point(&self, p: Vec2) -> Option<Vec2> {
+    fn closest_point(&self, p: Vec2) -> Vec2 {
         let pa = p - self.start;
-        let t = Vec2::dot(pa, self.n) / Vec2::dot(self.n, self.n);
-
-        if 0.0 <= t && t <= 1.0 {
-            Some(self.start + self.n * t)
-        } else {
-            None
-        }
+        // Clamp to the segment so that past either end, the closest point is the endpoint.
+        let t = (Vec2::dot(pa, self.n) / Vec2::dot(self.n, self.n)).clamp(0.0, 1.0);
+        self.start + self.n * t
     }
 
     fn collide(&self, part: &Particle) -> Option<(Vec2, Vec2)> {
-        let closest = self.closest_point(part.pos)?;
+        let closest = self.closest_point(part.pos);
 
         let dist = Vec2::dist(closest, part.pos);
         if dist < part.radius {
             let normal = (part.pos - closest) / dist;
-            let new_vel = reflect(part.vel, normal);
+            // Only bounce if moving into the segment; if the particle is already
+            // moving away, reflecting would send it back in.
+            let new_vel = if part.vel.dot(normal) < 0.0 {
+                reflect(part.vel, normal)
+            } else {
+                part.vel
+            };
             let new_pos = closest + normal * part.radius;
 
             Some((new_vel, new_pos))
@@ -315,5 +324,93 @@ impl World {
         }
 
         collision_checks
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn momentum(p1: &Particle, v1: Vec2, p2: &Particle, v2: Vec2) -> Vec2 {
+        v1 * p1.mass() + v2 * p2.mass()
+    }
+
+    fn assert_close(a: Vec2, b: Vec2) {
+        assert!(
+            (a.0 - b.0).abs() < 1e-2 && (a.1 - b.1).abs() < 1e-2,
+            "expected ({}, {}) to be close to ({}, {})",
+            a.0,
+            a.1,
+            b.0,
+            b.1
+        );
+    }
+
+    #[test]
+    fn collision_conserves_momentum_for_unequal_masses() {
+        let big = Particle::new(Vec2(0.0, 0.0), Vec2(100.0, 0.0), 20.0);
+        let small = Particle::new(Vec2(24.0, 0.0), Vec2(0.0, 0.0), 5.0);
+
+        let (v1, v2) = Particle::new_vel(&big, &small);
+
+        assert_close(
+            momentum(&big, big.vel, &small, small.vel),
+            momentum(&big, v1, &small, v2),
+        );
+        // A heavy particle keeps moving forward after hitting a light one.
+        assert!(v1.0 > 0.0);
+        assert!(v2.0 > v1.0);
+    }
+
+    #[test]
+    fn overlapping_particles_moving_apart_keep_their_velocities() {
+        let p1 = Particle::new(Vec2(0.0, 0.0), Vec2(-10.0, 0.0), 10.0);
+        let p2 = Particle::new(Vec2(15.0, 0.0), Vec2(10.0, 0.0), 10.0);
+
+        let (v1, v2) = Particle::new_vel(&p1, &p2);
+
+        assert_close(v1, p1.vel);
+        assert_close(v2, p2.vel);
+    }
+
+    #[test]
+    fn particle_moving_into_segment_bounces() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(50.0, 95.0), Vec2(0.0, 50.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, Vec2(0.0, -50.0));
+        assert_close(pos, Vec2(50.0, 90.0));
+    }
+
+    #[test]
+    fn overlapping_particle_moving_away_from_segment_keeps_its_velocity() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(50.0, 95.0), Vec2(0.0, -50.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, part.vel);
+        assert_close(pos, Vec2(50.0, 90.0));
+    }
+
+    #[test]
+    fn particle_hitting_segment_endpoint_bounces() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(205.0, 100.0), Vec2(-50.0, 0.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, Vec2(50.0, 0.0));
+        assert_close(pos, Vec2(210.0, 100.0));
+    }
+
+    #[test]
+    fn particle_beyond_segment_endpoint_does_not_collide() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(215.0, 100.0), Vec2(-50.0, 0.0), 10.0);
+
+        assert!(floor.collide(&part).is_none());
     }
 }
