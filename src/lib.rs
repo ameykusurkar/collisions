@@ -90,6 +90,12 @@ impl Particle {
         let dpos = p1.pos - p2.pos;
         let coeff = Vec2::dot(p1.vel - p2.vel, dpos) / Vec2::dot(dpos, dpos);
 
+        // coeff >= 0 means the particles are already separating; bouncing them
+        // would send them back into each other.
+        if coeff >= 0.0 {
+            return (p1.vel, p2.vel);
+        }
+
         let m1 = p1.mass();
         let m2 = p2.mass();
         // Each particle's velocity change is scaled by the *other* particle's mass.
@@ -153,7 +159,13 @@ impl LineSegment {
         let dist = Vec2::dist(closest, part.pos);
         if dist < part.radius {
             let normal = (part.pos - closest) / dist;
-            let new_vel = reflect(part.vel, normal);
+            // Only bounce if moving into the segment; if the particle is already
+            // moving away, reflecting would send it back in.
+            let new_vel = if part.vel.dot(normal) < 0.0 {
+                reflect(part.vel, normal)
+            } else {
+                part.vel
+            };
             let new_pos = closest + normal * part.radius;
 
             Some((new_vel, new_pos))
@@ -352,5 +364,38 @@ mod tests {
         // A heavy particle keeps moving forward after hitting a light one.
         assert!(v1.0 > 0.0);
         assert!(v2.0 > v1.0);
+    }
+
+    #[test]
+    fn overlapping_particles_moving_apart_keep_their_velocities() {
+        let p1 = Particle::new(Vec2(0.0, 0.0), Vec2(-10.0, 0.0), 10.0);
+        let p2 = Particle::new(Vec2(15.0, 0.0), Vec2(10.0, 0.0), 10.0);
+
+        let (v1, v2) = Particle::new_vel(&p1, &p2);
+
+        assert_close(v1, p1.vel);
+        assert_close(v2, p2.vel);
+    }
+
+    #[test]
+    fn particle_moving_into_segment_bounces() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(50.0, 95.0), Vec2(0.0, 50.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, Vec2(0.0, -50.0));
+        assert_close(pos, Vec2(50.0, 90.0));
+    }
+
+    #[test]
+    fn overlapping_particle_moving_away_from_segment_keeps_its_velocity() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(50.0, 95.0), Vec2(0.0, -50.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, part.vel);
+        assert_close(pos, Vec2(50.0, 90.0));
     }
 }
