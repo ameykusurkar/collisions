@@ -142,19 +142,15 @@ impl LineSegment {
         Self { n, start }
     }
 
-    fn closest_point(&self, p: Vec2) -> Option<Vec2> {
+    fn closest_point(&self, p: Vec2) -> Vec2 {
         let pa = p - self.start;
-        let t = Vec2::dot(pa, self.n) / Vec2::dot(self.n, self.n);
-
-        if 0.0 <= t && t <= 1.0 {
-            Some(self.start + self.n * t)
-        } else {
-            None
-        }
+        // Clamp to the segment so that past either end, the closest point is the endpoint.
+        let t = (Vec2::dot(pa, self.n) / Vec2::dot(self.n, self.n)).clamp(0.0, 1.0);
+        self.start + self.n * t
     }
 
     fn collide(&self, part: &Particle) -> Option<(Vec2, Vec2)> {
-        let closest = self.closest_point(part.pos)?;
+        let closest = self.closest_point(part.pos);
 
         let dist = Vec2::dist(closest, part.pos);
         if dist < part.radius {
@@ -397,5 +393,24 @@ mod tests {
 
         assert_close(vel, part.vel);
         assert_close(pos, Vec2(50.0, 90.0));
+    }
+
+    #[test]
+    fn particle_hitting_segment_endpoint_bounces() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(205.0, 100.0), Vec2(-50.0, 0.0), 10.0);
+
+        let (vel, pos) = floor.collide(&part).unwrap();
+
+        assert_close(vel, Vec2(50.0, 0.0));
+        assert_close(pos, Vec2(210.0, 100.0));
+    }
+
+    #[test]
+    fn particle_beyond_segment_endpoint_does_not_collide() {
+        let floor = LineSegment::new(Vec2(0.0, 100.0), Vec2(200.0, 100.0));
+        let part = Particle::new(Vec2(215.0, 100.0), Vec2(-50.0, 0.0), 10.0);
+
+        assert!(floor.collide(&part).is_none());
     }
 }

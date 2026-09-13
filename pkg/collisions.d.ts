@@ -126,6 +126,14 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_get_vec2_0: (a: number) => number;
+  readonly __wbg_get_vec2_1: (a: number) => number;
+  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
+  readonly __wbg_set_vec2_1: (a: number, b: number) => void;
+  readonly __wbg_vec2_free: (a: number) => void;
+  readonly vec2_new: (a: number, b: number) => number;
+  readonly vec2_x: (a: number) => number;
+  readonly vec2_y: (a: number) => number;
   readonly __wbg_color_free: (a: number) => void;
   readonly __wbg_get_color_0: (a: number) => number;
   readonly __wbg_get_color_1: (a: number) => number;
@@ -133,8 +141,6 @@ export interface InitOutput {
   readonly __wbg_get_particle_pos: (a: number) => number;
   readonly __wbg_get_particle_radius: (a: number) => number;
   readonly __wbg_get_particle_vel: (a: number) => number;
-  readonly __wbg_get_vec2_0: (a: number) => number;
-  readonly __wbg_get_vec2_1: (a: number) => number;
   readonly __wbg_particle_free: (a: number) => void;
   readonly __wbg_set_color_0: (a: number, b: number) => void;
   readonly __wbg_set_color_1: (a: number, b: number) => void;
@@ -142,15 +148,9 @@ export interface InitOutput {
   readonly __wbg_set_particle_pos: (a: number, b: number) => void;
   readonly __wbg_set_particle_radius: (a: number, b: number) => void;
   readonly __wbg_set_particle_vel: (a: number, b: number) => void;
-  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
-  readonly __wbg_set_vec2_1: (a: number, b: number) => void;
-  readonly __wbg_vec2_free: (a: number) => void;
   readonly __wbg_world_free: (a: number) => void;
   readonly particle_contains: (a: number, b: number) => number;
   readonly particle_new: (a: number, b: number, c: number) => number;
-  readonly vec2_new: (a: number, b: number) => number;
-  readonly vec2_x: (a: number) => number;
-  readonly vec2_y: (a: number) => number;
   readonly world_clear_particles: (a: number) => void;
   readonly world_colors: (a: number) => number;
   readonly world_momentum: (a: number) => number;
