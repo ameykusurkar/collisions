@@ -92,8 +92,9 @@ impl Particle {
 
         let m1 = p1.mass();
         let m2 = p2.mass();
-        let m_coeff1 = 2.0 * m1 / (m1 + m2);
-        let m_coeff2 = 2.0 * m2 / (m1 + m2);
+        // Each particle's velocity change is scaled by the *other* particle's mass.
+        let m_coeff1 = 2.0 * m2 / (m1 + m2);
+        let m_coeff2 = 2.0 * m1 / (m1 + m2);
 
         let dvel = dpos * coeff;
         (p1.vel - dvel * m_coeff1, p2.vel + dvel * m_coeff2)
@@ -315,5 +316,41 @@ impl World {
         }
 
         collision_checks
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn momentum(p1: &Particle, v1: Vec2, p2: &Particle, v2: Vec2) -> Vec2 {
+        v1 * p1.mass() + v2 * p2.mass()
+    }
+
+    fn assert_close(a: Vec2, b: Vec2) {
+        assert!(
+            (a.0 - b.0).abs() < 1e-2 && (a.1 - b.1).abs() < 1e-2,
+            "expected ({}, {}) to be close to ({}, {})",
+            a.0,
+            a.1,
+            b.0,
+            b.1
+        );
+    }
+
+    #[test]
+    fn collision_conserves_momentum_for_unequal_masses() {
+        let big = Particle::new(Vec2(0.0, 0.0), Vec2(100.0, 0.0), 20.0);
+        let small = Particle::new(Vec2(24.0, 0.0), Vec2(0.0, 0.0), 5.0);
+
+        let (v1, v2) = Particle::new_vel(&big, &small);
+
+        assert_close(
+            momentum(&big, big.vel, &small, small.vel),
+            momentum(&big, v1, &small, v2),
+        );
+        // A heavy particle keeps moving forward after hitting a light one.
+        assert!(v1.0 > 0.0);
+        assert!(v2.0 > v1.0);
     }
 }
