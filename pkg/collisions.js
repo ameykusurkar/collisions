@@ -235,15 +235,6 @@ export class Vec2 {
         wasm.__wbg_set_vec2_1(this.__wbg_ptr, arg0);
     }
     /**
-    * @param {number} x
-    * @param {number} y
-    * @returns {Vec2}
-    */
-    static new(x, y) {
-        const ret = wasm.vec2_new(x, y);
-        return Vec2.__wrap(ret);
-    }
-    /**
     * @returns {number}
     */
     x() {
@@ -258,6 +249,15 @@ export class Vec2 {
         const ptr = this.__destroy_into_raw();
         const ret = wasm.vec2_y(ptr);
         return ret;
+    }
+    /**
+    * @param {number} x
+    * @param {number} y
+    * @returns {Vec2}
+    */
+    static new(x, y) {
+        const ret = wasm.vec2_new(x, y);
+        return Vec2.__wrap(ret);
     }
 }
 
@@ -288,40 +288,14 @@ export class World {
         wasm.__wbg_world_free(ptr);
     }
     /**
-    * @param {number} width
-    * @param {number} height
-    * @returns {World}
-    */
-    static new(width, height) {
-        const ret = wasm.world_new(width, height);
-        return World.__wrap(ret);
-    }
-    /**
+    * @param {number} dt
+    * @param {number} drag
+    * @param {number} steps
+    * @param {CollisionAlgorithm} alg
     * @returns {number}
     */
-    momentum() {
-        const ret = wasm.world_momentum(this.__wbg_ptr);
-        return ret;
-    }
-    /**
-    * @returns {number}
-    */
-    num_particles() {
-        const ret = wasm.world_num_particles(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-    * @returns {number}
-    */
-    particles() {
-        const ret = wasm.world_particles(this.__wbg_ptr);
-        return ret >>> 0;
-    }
-    /**
-    * @returns {number}
-    */
-    colors() {
-        const ret = wasm.world_colors(this.__wbg_ptr);
+    step_frame(dt, drag, steps, alg) {
+        const ret = wasm.world_step_frame(this.__wbg_ptr, dt, drag, steps, alg);
         return ret >>> 0;
     }
     /**
@@ -336,6 +310,42 @@ export class World {
         wasm.world_push_segment(this.__wbg_ptr, ptr0, ptr1);
     }
     /**
+    * @returns {number}
+    */
+    num_particles() {
+        const ret = wasm.world_num_particles(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * Clears all particles from the world.
+    */
+    clear_particles() {
+        wasm.world_clear_particles(this.__wbg_ptr);
+    }
+    /**
+    * @param {number} width
+    * @param {number} height
+    * @returns {World}
+    */
+    static new(width, height) {
+        const ret = wasm.world_new(width, height);
+        return World.__wrap(ret);
+    }
+    /**
+    * @returns {number}
+    */
+    colors() {
+        const ret = wasm.world_colors(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @returns {number}
+    */
+    momentum() {
+        const ret = wasm.world_momentum(this.__wbg_ptr);
+        return ret;
+    }
+    /**
     * Adds the particle to the world if the space is unoccupied.
     * @param {Particle} particle
     * @returns {boolean}
@@ -347,20 +357,10 @@ export class World {
         return ret !== 0;
     }
     /**
-    * Clears all particles from the world.
-    */
-    clear_particles() {
-        wasm.world_clear_particles(this.__wbg_ptr);
-    }
-    /**
-    * @param {number} dt
-    * @param {number} drag
-    * @param {number} steps
-    * @param {CollisionAlgorithm} alg
     * @returns {number}
     */
-    step_frame(dt, drag, steps, alg) {
-        const ret = wasm.world_step_frame(this.__wbg_ptr, dt, drag, steps, alg);
+    particles() {
+        const ret = wasm.world_particles(this.__wbg_ptr);
         return ret >>> 0;
     }
 }

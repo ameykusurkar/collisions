@@ -51,12 +51,6 @@ export class Particle {
 export class Vec2 {
   free(): void;
 /**
-* @param {number} x
-* @param {number} y
-* @returns {Vec2}
-*/
-  static new(x: number, y: number): Vec2;
-/**
 * @returns {number}
 */
   x(): number;
@@ -64,6 +58,12 @@ export class Vec2 {
 * @returns {number}
 */
   y(): number;
+/**
+* @param {number} x
+* @param {number} y
+* @returns {Vec2}
+*/
+  static new(x: number, y: number): Vec2;
 /**
 */
   0: number;
@@ -76,6 +76,27 @@ export class Vec2 {
 export class World {
   free(): void;
 /**
+* @param {number} dt
+* @param {number} drag
+* @param {number} steps
+* @param {CollisionAlgorithm} alg
+* @returns {number}
+*/
+  step_frame(dt: number, drag: number, steps: number, alg: CollisionAlgorithm): number;
+/**
+* @param {Vec2} start
+* @param {Vec2} end
+*/
+  push_segment(start: Vec2, end: Vec2): void;
+/**
+* @returns {number}
+*/
+  num_particles(): number;
+/**
+* Clears all particles from the world.
+*/
+  clear_particles(): void;
+/**
 * @param {number} width
 * @param {number} height
 * @returns {World}
@@ -84,24 +105,11 @@ export class World {
 /**
 * @returns {number}
 */
-  momentum(): number;
-/**
-* @returns {number}
-*/
-  num_particles(): number;
-/**
-* @returns {number}
-*/
-  particles(): number;
-/**
-* @returns {number}
-*/
   colors(): number;
 /**
-* @param {Vec2} start
-* @param {Vec2} end
+* @returns {number}
 */
-  push_segment(start: Vec2, end: Vec2): void;
+  momentum(): number;
 /**
 * Adds the particle to the world if the space is unoccupied.
 * @param {Particle} particle
@@ -109,17 +117,9 @@ export class World {
 */
   try_push(particle: Particle): boolean;
 /**
-* Clears all particles from the world.
-*/
-  clear_particles(): void;
-/**
-* @param {number} dt
-* @param {number} drag
-* @param {number} steps
-* @param {CollisionAlgorithm} alg
 * @returns {number}
 */
-  step_frame(dt: number, drag: number, steps: number, alg: CollisionAlgorithm): number;
+  particles(): number;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -128,38 +128,38 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_color_free: (a: number) => void;
   readonly __wbg_get_color_0: (a: number) => number;
-  readonly __wbg_set_color_0: (a: number, b: number) => void;
   readonly __wbg_get_color_1: (a: number) => number;
-  readonly __wbg_set_color_1: (a: number, b: number) => void;
   readonly __wbg_get_color_2: (a: number) => number;
-  readonly __wbg_set_color_2: (a: number, b: number) => void;
-  readonly __wbg_particle_free: (a: number) => void;
   readonly __wbg_get_particle_pos: (a: number) => number;
-  readonly __wbg_set_particle_pos: (a: number, b: number) => void;
-  readonly __wbg_get_particle_vel: (a: number) => number;
-  readonly __wbg_set_particle_vel: (a: number, b: number) => void;
   readonly __wbg_get_particle_radius: (a: number) => number;
-  readonly __wbg_set_particle_radius: (a: number, b: number) => void;
-  readonly particle_new: (a: number, b: number, c: number) => number;
-  readonly particle_contains: (a: number, b: number) => number;
-  readonly __wbg_world_free: (a: number) => void;
-  readonly world_new: (a: number, b: number) => number;
-  readonly world_momentum: (a: number) => number;
-  readonly world_num_particles: (a: number) => number;
-  readonly world_particles: (a: number) => number;
-  readonly world_colors: (a: number) => number;
-  readonly world_push_segment: (a: number, b: number, c: number) => void;
-  readonly world_try_push: (a: number, b: number) => number;
-  readonly world_clear_particles: (a: number) => void;
-  readonly world_step_frame: (a: number, b: number, c: number, d: number, e: number) => number;
-  readonly __wbg_vec2_free: (a: number) => void;
+  readonly __wbg_get_particle_vel: (a: number) => number;
   readonly __wbg_get_vec2_0: (a: number) => number;
-  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
   readonly __wbg_get_vec2_1: (a: number) => number;
+  readonly __wbg_particle_free: (a: number) => void;
+  readonly __wbg_set_color_0: (a: number, b: number) => void;
+  readonly __wbg_set_color_1: (a: number, b: number) => void;
+  readonly __wbg_set_color_2: (a: number, b: number) => void;
+  readonly __wbg_set_particle_pos: (a: number, b: number) => void;
+  readonly __wbg_set_particle_radius: (a: number, b: number) => void;
+  readonly __wbg_set_particle_vel: (a: number, b: number) => void;
+  readonly __wbg_set_vec2_0: (a: number, b: number) => void;
   readonly __wbg_set_vec2_1: (a: number, b: number) => void;
+  readonly __wbg_vec2_free: (a: number) => void;
+  readonly __wbg_world_free: (a: number) => void;
+  readonly particle_contains: (a: number, b: number) => number;
+  readonly particle_new: (a: number, b: number, c: number) => number;
   readonly vec2_new: (a: number, b: number) => number;
   readonly vec2_x: (a: number) => number;
   readonly vec2_y: (a: number) => number;
+  readonly world_clear_particles: (a: number) => void;
+  readonly world_colors: (a: number) => number;
+  readonly world_momentum: (a: number) => number;
+  readonly world_new: (a: number, b: number) => number;
+  readonly world_num_particles: (a: number) => number;
+  readonly world_particles: (a: number) => number;
+  readonly world_push_segment: (a: number, b: number, c: number) => void;
+  readonly world_step_frame: (a: number, b: number, c: number, d: number, e: number) => number;
+  readonly world_try_push: (a: number, b: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
